@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package hyperion.v1;
+
+option go_package = "github.com/vanovri/hyperion/contracts/gen/go/hyperionv1;hyperionv1";
+
+// =============================================================================
+// HYPERION FIXED-POINT ARITHMETIC INVARIANT (SCALE = 1e8 = 100,000,000)
+// =============================================================================
+// ABSOLUTE INVARIANT: Floating-point types (float/double/f32/f64) are STRICTLY
+// FORBIDDEN for prices, quantities, notional values, fees, PnL, and balances.
+// All monetary & quantity scalars are integer atomic ticks scaled by 10^8:
+//   1.00000000 unit = 100_000_000
+// Rates / probabilities / ratios use integer parts-per-million (ppm, 10^6) or
+// integer basis points (bps, 10^4), explicitly suffixed with _ppm or _bps.
+// =============================================================================
+
+// Two's-complement signed 128-bit fixed-point integer (scale 1e8 unless noted).
+// Value = (hi * 2^64) + lo, where hi is signed int64 and lo is unsigned uint64.
+message I128 {
+  int64 hi = 1;
+  uint64 lo = 2;
+}
+
+// Unsigned 128-bit fixed-point integer (scale 1e8 unless noted).
+// Value = (hi * 2^64) + lo.
+message U128 {
+  uint64 hi = 1;
+  uint64 lo = 2;
+}
+
+// W3C / OpenTelemetry distributed tracing & deterministic causality envelope.
+message TraceMetadata {
+  // 32-char lowercase hex W3C trace ID (128-bit).
+  string trace_id = 1;
+  // 16-char lowercase hex W3C span ID (64-bit).
+  string span_id = 2;
+  // End-to-end deterministic request correlation identifier.
+  string correlation_id = 3;
+  // Originating microservice identifier (e.g., "gateway-go", "chaos-sim").
+  string source_service = 4;
+  // Monotonic / UTC epoch nanosecond timestamp at ingress.
+  uint64 ingest_ts_ns = 5;
+}
+
+// Canonical order side.
+enum OrderSide {
+  ORDER_SIDE_UNSPECIFIED = 0;
+  ORDER_SIDE_BUY = 1;
+  ORDER_SIDE_SELL = 2;
+}
+
+// Canonical order execution instruction type.
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_LIMIT = 1;
+  ORDER_TYPE_MARKET = 2;
+  ORDER_TYPE_IOC = 3;
+  ORDER_TYPE_FOK = 4;
+  ORDER_TYPE_POST_ONLY = 5;
+}
+
+// Self-Trade Prevention (STP) policy when maker_account_id == taker_account_id.
+enum SelfTradePreventionMode {
+  SELF_TRADE_PREVENTION_MODE_UNSPECIFIED = 0;
+  SELF_TRADE_PREVENTION_MODE_NONE = 1;
+  SELF_TRADE_PREVENTION_MODE_CANCEL_RESTING = 2;
+  SELF_TRADE_PREVENTION_MODE_CANCEL_AGGRESSING = 3;
+  SELF_TRADE_PREVENTION_MODE_CANCEL_BOTH = 4;
+}
+
+// Operational risk state of a trading account.
+enum AccountStatus {
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+  ACCOUNT_STATUS_ACTIVE = 1;
+  ACCOUNT_STATUS_THROTTLED = 2;
+  ACCOUNT_STATUS_FROZEN = 3;
+  ACCOUNT_STATUS_LIQUIDATION_ONLY = 4;
+}
+
+// Global or per-instrument exchange protective market regime.
+enum MarketRegime {
+  MARKET_REGIME_UNSPECIFIED = 0;
+  MARKET_REGIME_NORMAL = 1;
+  MARKET_REGIME_VOLATILITY_GUARD = 2;
+  MARKET_REGIME_POST_ONLY_AUCTION = 3;
+  MARKET_REGIME_HALTED = 4;
+}

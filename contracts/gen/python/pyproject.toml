@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperion-proto"
+version = "0.1.0"
+description = "Canonical Protobuf v3, gRPC, and 1e8 fixed-point contracts for HYPERION"
+requires-python = ">=3.11"
+dependencies = [
+  "protobuf>=5.28.0",
+  "grpcio>=1.68.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

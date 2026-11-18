@@ -1,0 +1,20 @@
+{
+  "name": "@hyperion/contracts",
+  "version": "0.1.0",
+  "description": "Canonical Protobuf v3 (bigint-strict), OpenAPI 3.1 constants, and Binary WS codecs for HYPERION",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test dist/contracts.test.js"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "ts-proto": "^2.6.1",
+    "typescript": "^5.7.3"
+  }
+}

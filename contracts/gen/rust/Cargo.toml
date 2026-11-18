@@ -1,0 +1,15 @@
+[package]
+name = "hyperion-proto"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Canonical Protobuf v3, gRPC, and 1e8 fixed-point contracts for HYPERION"
+
+[dependencies]
+bytes = "1.8"
+prost = "0.13"
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+
+[build-dependencies]
+prost-build = "0.13"
+tonic-build = "0.12"

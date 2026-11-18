@@ -1,0 +1,382 @@
+syntax = "proto3";
+
+package hyperion.v1;
+
+import "common.proto";
+
+option go_package = "github.com/vanovri/hyperion/contracts/gen/go/hyperionv1;hyperionv1";
+
+// Lifecycle state of an order inside the LMAX single-writer matching engine.
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_ACCEPTED = 1;
+  ORDER_STATUS_PARTIALLY_FILLED = 2;
+  ORDER_STATUS_FILLED = 3;
+  ORDER_STATUS_CANCELED = 4;
+  ORDER_STATUS_MODIFIED = 5;
+  ORDER_STATUS_REJECTED = 6;
+  ORDER_STATUS_EXPIRED = 7;
+}
+
+// Deterministic rejection code when an order or mutation cannot be applied.
+enum RejectReason {
+  REJECT_REASON_UNSPECIFIED = 0;
+  REJECT_REASON_NONE = 1;
+  REJECT_REASON_INSUFFICIENT_BALANCE = 2;
+  REJECT_REASON_POST_ONLY_WOULD_CROSS = 3;
+  REJECT_REASON_FOK_INSUFFICIENT_LIQUIDITY = 4;
+  REJECT_REASON_SELF_TRADE_PREVENTED = 5;
+  REJECT_REASON_ACCOUNT_FROZEN = 6;
+  REJECT_REASON_MARKET_HALTED = 7;
+  REJECT_REASON_INVALID_PRICE_OR_QTY = 8;
+  REJECT_REASON_DUPLICATE_IDEMPOTENCY_KEY = 9;
+  REJECT_REASON_ORDER_NOT_FOUND = 10;
+  REJECT_REASON_MAX_ORDER_SIZE_EXCEEDED = 11;
+  REJECT_REASON_RATE_LIMITED = 12;
+  REJECT_REASON_INVALID_SIGNATURE_OR_NONCE = 13;
+}
+
+// Level-3 incremental order book delta operation type.
+enum L3DeltaOp {
+  L3_DELTA_OP_UNSPECIFIED = 0;
+  L3_DELTA_OP_ADD = 1;
+  L3_DELTA_OP_MODIFY = 2;
+  L3_DELTA_OP_CANCEL = 3;
+  L3_DELTA_OP_FILL = 4;
+  L3_DELTA_OP_CLEAR = 5;
+}
+
+// Command to place a new order into the deterministic Limit Order Book.
+message SubmitOrder {
+  string client_order_id = 1;
+  uint64 account_id = 2;
+  string symbol = 3;
+  uint32 instrument_id = 4;
+  OrderSide side = 5;
+  OrderType order_type = 6;
+  SelfTradePreventionMode stp_mode = 7;
+  // Fixed-point price scaled by 1e8 (0 only for pure MARKET orders).
+  uint64 price_fp = 8;
+  // Fixed-point base asset quantity scaled by 1e8 (must be > 0).
+  uint64 qty_fp = 9;
+  // Maximum acceptable slippage in integer basis points (1 bps = 0.01%).
+  uint32 max_slippage_bps = 10;
+  uint64 client_ts_ns = 11;
+  uint64 nonce = 12;
+  bytes signature = 13;
+  string idempotency_key = 14;
+  TraceMetadata trace = 15;
+}
+
+// Command to cancel a resting order in the Limit Order Book.
+message CancelOrder {
+  uint64 order_id = 1;
+  string client_order_id = 2;
+  uint64 account_id = 3;
+  string symbol = 4;
+  uint32 instrument_id = 5;
+  uint64 client_ts_ns = 6;
+  uint64 nonce = 7;
+  bytes signature = 8;
+  string idempotency_key = 9;
+  TraceMetadata trace = 10;
+}
+
+// Command to atomically amend price and/or quantity of an active resting order.
+// Price changes or size increases lose time priority; size reductions preserve priority.
+message ModifyOrder {
+  uint64 order_id = 1;
+  string client_order_id = 2;
+  uint64 account_id = 3;
+  string symbol = 4;
+  uint32 instrument_id = 5;
+  // New fixed-point limit price scaled by 1e8.
+  uint64 new_price_fp = 6;
+  // New total order quantity scaled by 1e8.
+  uint64 new_qty_fp = 7;
+  uint64 client_ts_ns = 8;
+  uint64 nonce = 9;
+  bytes signature = 10;
+  string idempotency_key = 11;
+  TraceMetadata trace = 12;
+}
+
+// Immutable record of a matched trade execution between a resting maker and aggressing taker.
+message ExecutionFill {
+  uint64 fill_id = 1;
+  uint64 engine_seq = 2;
+  string symbol = 3;
+  uint32 instrument_id = 4;
+  uint64 maker_order_id = 5;
+  uint64 taker_order_id = 6;
+  uint64 maker_account_id = 7;
+  uint64 taker_account_id = 8;
+  OrderSide aggressor_side = 9;
+  // Matched execution price in fixed-point (scale 1e8).
+  uint64 price_fp = 10;
+  // Matched base asset quantity in fixed-point (scale 1e8).
+  uint64 qty_fp = 11;
+  // Matched quote asset notional = (price_fp * qty_fp) / 1e8 in fixed-point (scale 1e8).
+  U128 notional_fp = 12;
+  // Signed maker fee in quote asset fixed-point (scale 1e8; negative = maker rebate).
+  int64 maker_fee_fp = 13;
+  // Signed taker fee in quote asset fixed-point (scale 1e8).
+  int64 taker_fee_fp = 14;
+  uint64 exec_ts_ns = 15;
+  // 32-byte Blake3 chained WAL digest committing this execution.
+  bytes wal_blake3_hash = 16;
+  TraceMetadata trace = 17;
+}
+
+// Synchronous engine acknowledgment returned for SubmitOrder, CancelOrder, and ModifyOrder.
+message OrderAck {
+  uint64 engine_seq = 1;
+  uint64 order_id = 2;
+  string client_order_id = 3;
+  uint64 account_id = 4;
+  string symbol = 5;
+  uint32 instrument_id = 6;
+  OrderStatus status = 7;
+  RejectReason reject_reason = 8;
+  string reject_detail = 9;
+  // Cumulative executed base quantity (scale 1e8).
+  uint64 filled_qty_fp = 10;
+  // Remaining open base quantity on book (scale 1e8).
+  uint64 remaining_qty_fp = 11;
+  // Volume-weighted average fill price for this command (scale 1e8; 0 if unfilled).
+  uint64 avg_fill_price_fp = 12;
+  uint64 engine_ts_ns = 13;
+  // 32-byte Blake3 hash of the WAL frame that persisted this transition.
+  bytes wal_blake3_hash = 14;
+  repeated ExecutionFill fills = 15;
+  TraceMetadata trace = 16;
+}
+
+// Aggregated liquidity at a single fixed-point price tick.
+message PriceLevel {
+  uint64 price_fp = 1;
+  uint64 total_qty_fp = 2;
+  uint32 order_count = 3;
+}
+
+// Full or top-N Level-2 order book snapshot at a deterministic engine sequence number.
+message L2BookSnapshot {
+  uint64 engine_seq = 1;
+  string symbol = 2;
+  uint32 instrument_id = 3;
+  // Sorted descending by price_fp (best bid at index 0).
+  repeated PriceLevel bids = 4;
+  // Sorted ascending by price_fp (best ask at index 0).
+  repeated PriceLevel asks = 5;
+  uint64 best_bid_fp = 6;
+  uint64 best_ask_fp = 7;
+  uint64 mid_price_fp = 8;
+  uint64 spread_fp = 9;
+  uint64 snapshot_ts_ns = 10;
+  // 32-byte Blake3 state root committing LOB + double-entry ledger at engine_seq.
+  bytes state_root_blake3 = 11;
+}
+
+// Granular Level-3 order-by-order book mutation event for sub-millisecond state replication.
+message L3BookDelta {
+  uint64 engine_seq = 1;
+  uint64 prev_engine_seq = 2;
+  string symbol = 3;
+  uint32 instrument_id = 4;
+  L3DeltaOp op = 5;
+  OrderSide side = 6;
+  uint64 order_id = 7;
+  uint64 account_id = 8;
+  uint64 price_fp = 9;
+  // Post-mutation open quantity for this order (scale 1e8; 0 on CANCEL/full FILL).
+  uint64 remaining_qty_fp = 10;
+  // Signed liquidity change at price_fp in fixed-point (scale 1e8).
+  int64 delta_qty_fp = 11;
+  uint64 event_ts_ns = 12;
+  bytes state_root_blake3 = 13;
+  TraceMetadata trace = 14;
+}
+
+// Individual debit or credit leg inside a balanced double-entry accounting journal.
+message LedgerEntryLine {
+  uint64 account_id = 1;
+  string asset = 2;
+  // Canonical sub-ledger bucket: "AVAILABLE", "LOCKED_MARGIN", or "TREASURY_FEE".
+  string sub_account = 3;
+  I128 debit_fp = 4;
+  I128 credit_fp = 5;
+  I128 balance_after_fp = 6;
+}
+
+// Balanced double-entry accounting journal (Sum(debit_fp) == Sum(credit_fp) invariant).
+message LedgerJournalEntry {
+  uint64 journal_seq = 1;
+  uint64 engine_seq = 2;
+  string reference_type = 3;
+  uint64 reference_id = 4;
+  repeated LedgerEntryLine lines = 5;
+  uint64 ts_ns = 6;
+  bytes prev_journal_blake3 = 7;
+  bytes journal_blake3 = 8;
+}
+
+// Sibling hash step in a binary Blake3 Merkle inclusion proof.
+message MerkleProofNode {
+  bytes sibling_hash = 1;
+  bool is_left_sibling = 2;
+  uint32 depth = 3;
+}
+
+// Per-asset fixed-point balance breakdown for an account leaf.
+message AccountAssetBalance {
+  string asset = 1;
+  I128 available_fp = 2;
+  I128 locked_fp = 3;
+  I128 total_fp = 4;
+}
+
+// Cryptographic Blake3 Merkle inclusion proof & global conservation-of-funds attestation.
+message MerkleLedgerProof {
+  uint64 engine_seq = 1;
+  uint64 account_id = 2;
+  repeated AccountAssetBalance balances = 3;
+  bytes leaf_blake3_hash = 4;
+  bytes state_root_blake3 = 5;
+  repeated MerkleProofNode proof_path = 6;
+  U128 system_total_deposits_fp = 7;
+  U128 system_total_user_equity_fp = 8;
+  I128 treasury_fee_pool_fp = 9;
+  // True iff Sum(Available + Locked across all accounts) + TreasuryFeePool == TotalDeposits.
+  bool double_entry_balanced = 10;
+  uint64 proof_ts_ns = 11;
+}
+
+// gRPC wrappers for OrderbookService.
+message SubmitOrderRequest {
+  SubmitOrder order = 1;
+}
+
+message SubmitOrderResponse {
+  OrderAck ack = 1;
+}
+
+message CancelOrderRequest {
+  CancelOrder cancel = 1;
+}
+
+message CancelOrderResponse {
+  OrderAck ack = 1;
+}
+
+message ModifyOrderRequest {
+  ModifyOrder modify = 1;
+}
+
+message ModifyOrderResponse {
+  OrderAck ack = 1;
+}
+
+message CreditDepositRequest {
+  string deposit_id = 1;
+  uint64 account_id = 2;
+  string asset = 3;
+  // Fixed-point deposit amount scaled by 1e8 (must be > 0).
+  U128 amount_fp = 4;
+  uint64 ts_ns = 5;
+  TraceMetadata trace = 6;
+}
+
+message CreditDepositResponse {
+  uint64 engine_seq = 1;
+  uint64 journal_seq = 2;
+  AccountAssetBalance updated_balance = 3;
+  bytes state_root_blake3 = 4;
+}
+
+message GetL2BookSnapshotRequest {
+  string symbol = 1;
+  uint32 depth = 2;
+}
+
+message GetL2BookSnapshotResponse {
+  L2BookSnapshot snapshot = 1;
+}
+
+message GetMerkleLedgerProofRequest {
+  uint64 account_id = 1;
+  // Optional historical sequence; 0 queries latest committed state.
+  uint64 at_engine_seq = 2;
+}
+
+message GetMerkleLedgerProofResponse {
+  MerkleLedgerProof proof = 1;
+}
+
+message VerifySystemLedgerInvariantRequest {
+  string asset = 1;
+}
+
+message VerifySystemLedgerInvariantResponse {
+  uint64 engine_seq = 1;
+  string asset = 2;
+  U128 total_deposits_fp = 3;
+  U128 total_available_fp = 4;
+  U128 total_locked_fp = 5;
+  I128 treasury_fee_pool_fp = 6;
+  bool invariant_holds = 7;
+  bool crossed_book_free = 8;
+  bytes state_root_blake3 = 9;
+  uint64 verified_ts_ns = 10;
+}
+
+message ApplyAccountRiskActionRequest {
+  uint64 account_id = 1;
+  AccountStatus new_status = 2;
+  MarketRegime symbol_regime_override = 3;
+  string target_symbol = 4;
+  bool cancel_all_open_orders = 5;
+  string command_id = 6;
+  string reason = 7;
+  TraceMetadata trace = 8;
+}
+
+message ApplyAccountRiskActionResponse {
+  bool applied = 1;
+  uint64 engine_seq = 2;
+  uint32 canceled_orders_count = 3;
+  AccountStatus effective_status = 4;
+  bytes state_root_blake3 = 5;
+}
+
+message StreamMarketEventsRequest {
+  repeated string symbols = 1;
+  uint64 from_engine_seq = 2;
+  bool include_l3_deltas = 3;
+  bool include_fills = 4;
+}
+
+message MarketEventEnvelope {
+  uint64 engine_seq = 1;
+  string symbol = 2;
+  uint64 ts_ns = 3;
+  oneof payload {
+    L3BookDelta l3_delta = 4;
+    ExecutionFill fill = 5;
+    L2BookSnapshot l2_snapshot = 6;
+    OrderAck order_ack = 7;
+    LedgerJournalEntry journal_entry = 8;
+  }
+}
+
+// Primary gRPC interface exposed by services/ledger-rs on port 50151.
+service OrderbookService {
+  rpc SubmitOrder(SubmitOrderRequest) returns (SubmitOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc ModifyOrder(ModifyOrderRequest) returns (ModifyOrderResponse);
+  rpc CreditDeposit(CreditDepositRequest) returns (CreditDepositResponse);
+  rpc GetL2BookSnapshot(GetL2BookSnapshotRequest) returns (GetL2BookSnapshotResponse);
+  rpc GetMerkleLedgerProof(GetMerkleLedgerProofRequest) returns (GetMerkleLedgerProofResponse);
+  rpc VerifySystemLedgerInvariant(VerifySystemLedgerInvariantRequest) returns (VerifySystemLedgerInvariantResponse);
+  rpc ApplyAccountRiskAction(ApplyAccountRiskActionRequest) returns (ApplyAccountRiskActionResponse);
+  rpc StreamMarketEvents(StreamMarketEventsRequest) returns (stream MarketEventEnvelope);
+}

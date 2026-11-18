@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package hyperion.v1;
+
+import "common.proto";
+
+option go_package = "github.com/vanovri/hyperion/contracts/gen/go/hyperionv1;hyperionv1";
+
+// Taxonomy of market manipulation & financial fraud typologies detected by Sentinel-ML.
+enum AnomalyPatternType {
+  ANOMALY_PATTERN_TYPE_UNSPECIFIED = 0;
+  ANOMALY_PATTERN_TYPE_WASH_TRADING_CYCLE = 1;
+  ANOMALY_PATTERN_TYPE_SPOOFING_LAYERING = 2;
+  ANOMALY_PATTERN_TYPE_VELOCITY_SPIKE = 3;
+  ANOMALY_PATTERN_TYPE_MOMENTUM_IGNITION = 4;
+  ANOMALY_PATTERN_TYPE_LATENCY_ARBITRAGE = 5;
+}
+
+// Automated or operator-approved protective action executed across Gateway & Ledger.
+enum MitigationActionType {
+  MITIGATION_ACTION_TYPE_UNSPECIFIED = 0;
+  MITIGATION_ACTION_TYPE_THROTTLE_RATE_LIMIT = 1;
+  MITIGATION_ACTION_TYPE_FREEZE_ACCOUNT = 2;
+  MITIGATION_ACTION_TYPE_CANCEL_OPEN_ORDERS = 3;
+  MITIGATION_ACTION_TYPE_ENABLE_VOLATILITY_GUARD = 4;
+  MITIGATION_ACTION_TYPE_RESTORE_NORMAL = 5;
+}
+
+// Directed temporal multigraph edge representing value transfer / trade execution (maker -> taker).
+message TransactionGraphEdge {
+  uint64 edge_id = 1;
+  uint64 fill_id = 2;
+  uint64 engine_seq = 3;
+  string symbol = 4;
+  uint64 maker_account_id = 5;
+  uint64 taker_account_id = 6;
+  OrderSide aggressor_side = 7;
+  // Matched price in fixed-point (scale 1e8).
+  uint64 price_fp = 8;
+  // Matched base quantity in fixed-point (scale 1e8).
+  uint64 qty_fp = 9;
+  // Matched quote notional in fixed-point (scale 1e8).
+  U128 notional_fp = 10;
+  uint64 exec_ts_ns = 11;
+  // Elapsed nanoseconds since the previous edge between the same ordered account pair.
+  uint64 prev_interaction_delta_ns = 12;
+  // Exponential temporal decay edge weight in parts-per-million (0..1_000_000).
+  uint32 temporal_decay_weight_ppm = 13;
+}
+
+// Evidence payload for circular wash-trading rings (e.g. A -> B -> C -> A, depth k <= 6).
+message WashTradingCycle {
+  string cycle_id = 1;
+  // Ordered ring of colluding account IDs (first == last or closed cycle).
+  repeated uint64 participant_account_ids = 2;
+  repeated TransactionGraphEdge cycle_edges = 3;
+  uint32 cycle_length = 4;
+  // Total circular wash volume in fixed-point (scale 1e8).
+  U128 circular_volume_fp = 5;
+  // Residual net inventory delta across ring members in fixed-point (scale 1e8).
+  U128 net_position_delta_fp = 6;
+  uint64 cycle_duration_ns = 7;
+  // Symmetry of leg sizes around the ring in parts-per-million (1_000_000 = identical leg sizes).
+  uint32 volume_symmetry_ppm = 8;
+}
+
+// Evidence payload for microstructure order-book spoofing & multi-tick layering.
+message SpoofingLayering {
+  uint64 suspect_account_id = 1;
+  OrderSide spoofed_side = 2;
+  // Number of distinct price ticks simultaneously layered with phantom liquidity.
+  uint32 layered_level_count = 3;
+  // Total phantom order quantity rapidly canceled near best quote (scale 1e8).
+  U128 canceled_spoof_qty_fp = 4;
+  // Aggressive execution quantity filled on the opposite side before/during cancellation (scale 1e8).
+  U128 opposite_side_exec_qty_fp = 5;
+  // Nanoseconds elapsed between opposite-side fill and spoof order cancellation.
+  uint64 cancel_to_fill_latency_ns = 6;
+  // Order-to-Trade Ratio scaled by 1e6 (e.g., 45_000_000 = 45.0x OTR).
+  uint64 order_to_trade_ratio_ppm = 7;
+  // Distance of spoofed liquidity from best bid/ask in basis points.
+  uint32 best_quote_distance_bps = 8;
+}
+
+// Evidence payload for abnormal high-frequency order burst / quote-stuffing / velocity spike.
+message VelocitySpike {
+  uint64 suspect_account_id = 1;
+  uint64 events_per_second = 2;
+  uint64 baseline_events_per_second = 3;
+  // Burst ratio relative to rolling account baseline in parts-per-million (1_000_000 = 1.0x).
+  uint64 burst_multiplier_ppm = 4;
+  // Cancellation ratio within sliding window in parts-per-million (0..1_000_000).
+  uint32 cancel_rate_ppm = 5;
+  U128 notional_burst_fp = 6;
+  uint64 window_duration_ns = 7;
+}
+
+// Local SHAP-style explainable AI feature attribution entry for auditability.
+message SHAPFeatureAttribution {
+  string feature_name = 1;
+  // Observed streaming feature value in fixed-point (scale 1e8).
+  int64 feature_value_fp = 2;
+  // Expected background baseline value in fixed-point (scale 1e8).
+  int64 baseline_value_fp = 3;
+  // Signed additive SHAP contribution to anomaly probability in parts-per-million (scale 1e6).
+  int64 shap_contribution_ppm = 4;
+  // 1-based rank ordered by |shap_contribution_ppm| descending.
+  uint32 importance_rank = 5;
+}
+
+// Real-time explainable fraud & manipulation alert emitted by Sentinel-ML.
+message AnomalyAlert {
+  string alert_id = 1;
+  uint64 engine_seq = 2;
+  string symbol = 3;
+  AnomalyPatternType pattern_type = 4;
+  // Normalized integer severity score in [0, 100].
+  uint32 severity_score = 5;
+  // Calibrated ensemble confidence in parts-per-million [0, 1_000_000].
+  uint32 confidence_ppm = 6;
+  // Temporal Autoencoder reconstruction MSE scaled by 1e6.
+  uint64 autoencoder_recon_error_ppm = 7;
+  // Isolation Forest anomaly score scaled by 1e6.
+  int64 isolation_forest_score_ppm = 8;
+  repeated uint64 offender_account_ids = 9;
+  repeated TransactionGraphEdge evidence_subgraph = 10;
+  repeated SHAPFeatureAttribution shap_attributions = 11;
+  oneof pattern_detail {
+    WashTradingCycle wash_trading_cycle = 12;
+    SpoofingLayering spoofing_layering = 13;
+    VelocitySpike velocity_spike = 14;
+  }
+  uint64 detected_ts_ns = 15;
+  uint64 inference_latency_us = 16;
+  string model_version = 17;
+  TraceMetadata trace = 18;
+}
+
+// Cryptographically signed mitigation command published by Aegis SRE Agent.
+message RiskMitigationCommand {
+  string command_id = 1;
+  string source_alert_id = 2;
+  string incident_id = 3;
+  MitigationActionType action = 4;
+  repeated uint64 target_account_ids = 5;
+  string target_symbol = 6;
+  // Enforced token-bucket quota in requests/sec when action == THROTTLE_RATE_LIMIT.
+  uint32 rate_limit_override_rps = 7;
+  uint64 cooldown_duration_ms = 8;
+  bool dry_run = 9;
+  bool requires_human_approval = 10;
+  string rollback_token = 11;
+  string reason = 12;
+  string issued_by = 13;
+  uint64 issued_ts_ns = 14;
+  uint64 expires_ts_ns = 15;
+  // Ed25519 signature over canonical serialized command payload.
+  bytes ed25519_signature = 16;
+  // Immutable hash-chained audit log digest (Blake3).
+  bytes audit_chain_blake3 = 17;
+  TraceMetadata trace = 18;
+}
+
+message AccountNodeSummary {
+  uint64 account_id = 1;
+  uint32 max_severity_score = 2;
+  uint64 order_to_trade_ratio_ppm = 3;
+  uint32 cancel_rate_ppm = 4;
+  U128 traded_volume_fp = 5;
+  uint32 active_alert_count = 6;
+}
+
+message InspectFraudSubgraphRequest {
+  uint64 center_account_id = 1;
+  string symbol = 2;
+  uint32 max_hops = 3;
+  uint64 lookback_window_ns = 4;
+}
+
+message InspectFraudSubgraphResponse {
+  repeated AccountNodeSummary nodes = 1;
+  repeated TransactionGraphEdge edges = 2;
+  repeated AnomalyAlert related_alerts = 3;
+  repeated SHAPFeatureAttribution top_attributions = 4;
+  uint64 snapshot_ts_ns = 5;
+}
+
+message ListRecentAlertsRequest {
+  string symbol = 1;
+  uint32 min_severity_score = 2;
+  uint32 limit = 3;
+}
+
+message ListRecentAlertsResponse {
+  repeated AnomalyAlert alerts = 1;
+}
+
+message StreamAnomalyAlertsRequest {
+  string symbol = 1;
+  uint32 min_severity_score = 2;
+}
+
+// Primary gRPC interface exposed by services/sentinel-ml on port 50153.
+service FraudTelemetryService {
+  rpc InspectFraudSubgraph(InspectFraudSubgraphRequest) returns (InspectFraudSubgraphResponse);
+  rpc ListRecentAlerts(ListRecentAlertsRequest) returns (ListRecentAlertsResponse);
+  rpc StreamAnomalyAlerts(StreamAnomalyAlertsRequest) returns (stream AnomalyAlert);
+}

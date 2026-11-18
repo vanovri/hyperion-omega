@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package hyperion.v1;
+
+import "common.proto";
+import "orderbook.proto";
+
+option go_package = "github.com/vanovri/hyperion/contracts/gen/go/hyperionv1;hyperionv1";
+
+// Interactive VCR playback transport control commands.
+enum ReplayControlAction {
+  REPLAY_CONTROL_ACTION_UNSPECIFIED = 0;
+  REPLAY_CONTROL_ACTION_PLAY = 1;
+  REPLAY_CONTROL_ACTION_PAUSE = 2;
+  REPLAY_CONTROL_ACTION_STEP_FORWARD = 3;
+  REPLAY_CONTROL_ACTION_STEP_BACKWARD = 4;
+  REPLAY_CONTROL_ACTION_REWIND = 5;
+  REPLAY_CONTROL_ACTION_SET_SPEED = 6;
+}
+
+// Request to deterministically reconstruct exact exchange & ledger state at sequence or nanosecond T.
+message TimeTravelSeekRequest {
+  string symbol = 1;
+  oneof target {
+    uint64 target_engine_seq = 2;
+    uint64 target_ts_ns = 3;
+  }
+  uint32 l2_depth = 4;
+  bool include_account_balances = 5;
+  bool verify_wal_hash_chain = 6;
+  TraceMetadata trace = 7;
+}
+
+// Reconstructed historical point-in-time state returned by Chronos.
+message TimeTravelSeekResponse {
+  uint64 resolved_engine_seq = 1;
+  uint64 resolved_ts_ns = 2;
+  uint64 base_snapshot_seq = 3;
+  uint64 replayed_wal_events = 4;
+  uint64 reconstruction_latency_us = 5;
+  bool wal_chain_verified = 6;
+  bytes state_root_blake3 = 7;
+  L2BookSnapshot l2_snapshot = 8;
+  repeated MerkleLedgerProof account_states = 9;
+}
+
+// Counterfactual override freezing or throttling a specific account at a chosen point in the fork.
+message AccountPolicyOverride {
+  uint64 account_id = 1;
+  AccountStatus status_override = 2;
+  // Engine sequence from which this override takes effect (0 = from fork start_seq).
+  uint64 effective_from_seq = 3;
+  // Effective nanosecond timestamp from which this override applies (0 = from fork start_ts_ns).
+  uint64 effective_from_ts_ns = 4;
+  uint32 rate_limit_rps = 5;
+  bool cancel_resting_orders_on_activation = 6;
+}
+
+// Counterfactual fee & risk parameter bundle for "What-If" sandbox simulation.
+message SimulationPolicyOverride {
+  // Optional maker fee override in signed parts-per-million (scale 1e6; negative = rebate).
+  optional int64 maker_fee_ppm_override = 1;
+  // Optional taker fee override in signed parts-per-million (scale 1e6).
+  optional int64 taker_fee_ppm_override = 2;
+  // Optional cap on single order quantity in fixed-point (scale 1e8).
+  optional uint64 max_order_qty_fp_override = 3;
+  // Optional cap on single order quote notional in fixed-point (scale 1e8).
+  U128 max_order_notional_fp_override = 4;
+  // Optional forced Self-Trade Prevention policy across all accounts.
+  SelfTradePreventionMode stp_mode_override = 5;
+  // Optional market regime override (e.g., VOLATILITY_GUARD or POST_ONLY_AUCTION).
+  MarketRegime regime_override = 6;
+  // Optional maximum allowed spread in bps before automatic post-only protection triggers.
+  optional uint32 volatility_guard_spread_bps = 7;
+  repeated AccountPolicyOverride account_overrides = 8;
+}
+
+// Request to branch historical WAL stream [T1, T2] under counterfactual fee/risk rules.
+message TimelineForkRequest {
+  string fork_name = 1;
+  string symbol = 2;
+  uint64 start_engine_seq = 3;
+  uint64 end_engine_seq = 4;
+  uint64 start_ts_ns = 5;
+  uint64 end_ts_ns = 6;
+  // Empty / unset overrides MUST yield a bit-identical zero diff against baseline.
+  SimulationPolicyOverride policy_override = 7;
+  TraceMetadata trace = 8;
+}
+
+// Per-account balance delta between Baseline and Counterfactual Forked timeline at T2.
+message AccountBalanceDiff {
+  uint64 account_id = 1;
+  string asset = 2;
+  I128 baseline_total_fp = 3;
+  I128 forked_total_fp = 4;
+  // forked_total_fp - baseline_total_fp in signed 128-bit fixed-point (scale 1e8).
+  I128 delta_total_fp = 5;
+}
+
+// Per-price-tick L2 liquidity difference between Baseline and Forked book at T2.
+message PriceLevelDiff {
+  OrderSide side = 1;
+  uint64 price_fp = 2;
+  uint64 baseline_qty_fp = 3;
+  uint64 forked_qty_fp = 4;
+  int64 delta_qty_fp = 5;
+}
+
+// High-precision comparison between actual production history (Baseline) and Counterfactual Fork.
+message StateTreeDiffResponse {
+  string fork_id = 1;
+  string symbol = 2;
+  uint64 start_engine_seq = 3;
+  uint64 end_engine_seq = 4;
+  bytes baseline_state_root_blake3 = 5;
+  bytes forked_state_root_blake3 = 6;
+  // True iff baseline_state_root_blake3 == forked_state_root_blake3 and all diffs == 0.
+  bool state_identical = 7;
+  uint64 baseline_clearing_price_fp = 8;
+  uint64 forked_clearing_price_fp = 9;
+  int64 clearing_price_delta_fp = 10;
+  uint32 baseline_volatility_bps = 11;
+  uint32 forked_volatility_bps = 12;
+  int32 max_slippage_delta_bps = 13;
+  // Total circular / manipulative volume prevented by the counterfactual policy (scale 1e8).
+  U128 prevented_wash_volume_fp = 14;
+  uint64 prevented_fills_count = 15;
+  uint64 rejected_orders_count = 16;
+  I128 treasury_fee_delta_fp = 17;
+  repeated AccountBalanceDiff account_diffs = 18;
+  repeated PriceLevelDiff l2_level_diffs = 19;
+  uint64 replayed_events_count = 20;
+  uint64 computation_latency_us = 21;
+}
+
+// Variable-speed VCR frame emitted during historical or counterfactual timeline playback.
+message ReplayFrameStream {
+  string session_id = 1;
+  // "baseline" or a counterfactual fork_id.
+  string timeline_id = 2;
+  string symbol = 3;
+  uint64 frame_index = 4;
+  uint64 engine_seq = 5;
+  uint64 event_ts_ns = 6;
+  // Integer milli-multiplier: 100 = 0.1x slow-mo, 1000 = 1.0x real-time, 100000 = 100.0x fast-forward.
+  uint32 speed_milli = 7;
+  bool is_paused = 8;
+  bytes state_root_blake3 = 9;
+  L2BookSnapshot l2_snapshot = 10;
+  repeated L3BookDelta frame_deltas = 11;
+  repeated ExecutionFill frame_fills = 12;
+}
+
+message StreamReplayFramesRequest {
+  string session_id = 1;
+  string timeline_id = 2;
+  string symbol = 3;
+  uint64 from_engine_seq = 4;
+  uint64 to_engine_seq = 5;
+  // Playback speed in milli-units (100 = 0.1x, 1000 = 1.0x, 100000 = 100x).
+  uint32 initial_speed_milli = 6;
+  uint32 l2_depth = 7;
+}
+
+message ControlReplaySessionRequest {
+  string session_id = 1;
+  ReplayControlAction action = 2;
+  uint32 speed_milli = 3;
+  uint64 step_count = 4;
+}
+
+message ControlReplaySessionResponse {
+  string session_id = 1;
+  uint64 current_engine_seq = 2;
+  uint32 effective_speed_milli = 3;
+  bool is_paused = 4;
+}
+
+// Primary gRPC interface exposed by services/chronos-replay on port 50154.
+service ChronosReplayService {
+  rpc TimeTravelSeek(TimeTravelSeekRequest) returns (TimeTravelSeekResponse);
+  rpc TimelineFork(TimelineForkRequest) returns (StateTreeDiffResponse);
+  rpc StreamReplayFrames(StreamReplayFramesRequest) returns (stream ReplayFrameStream);
+  rpc ControlReplaySession(ControlReplaySessionRequest) returns (ControlReplaySessionResponse);
+}

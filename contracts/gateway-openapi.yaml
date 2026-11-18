@@ -1,0 +1,1127 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://spec.openapis.org/oas/3.1/dialect/base
+info:
+  title: HYPERION Institutional Edge Gateway & Control Mesh API
+  version: 1.0.0
+  summary: >-
+    Deterministic Exchange REST API, Cryptographic Merkle Audit, Quantitative
+    Microstructure Analytics, Graph Fraud Forensics, Chronos Time-Travel, and
+    Autonomous SRE Control Plane.
+  description: |
+    **ABSOLUTE FIXED-POINT INVARIANT**:
+    Every monetary price, asset quantity, notional amount, fee, and account balance
+    across this API is encoded as a **stringified fixed-point integer scaled by 10^8**
+    (`1.00000000` = `"100000000"`). IEEE-754 floating-point numbers are strictly
+    forbidden for financial values to eliminate precision loss above 2^53 - 1.
+  contact:
+    name: HYPERION Principal Architecture Team
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local Edge API Gateway (services/gateway-go)
+  - url: http://localhost:8083
+    description: Direct Stream Aggregator Query API (services/stream-aggregator)
+  - url: http://localhost:8084
+    description: Direct Sentinel-ML Fraud API (services/sentinel-ml)
+  - url: http://localhost:8085
+    description: Direct Aegis SRE Agent & MCP Control Plane (services/aegis-agent)
+  - url: http://localhost:8086
+    description: Direct Chaos-Sim Control Plane (services/chaos-sim)
+  - url: http://localhost:8088
+    description: Direct Chronos Time-Travel API (services/chronos-replay)
+
+tags:
+  - name: System
+    description: Liveness, readiness, and deterministic clock status.
+  - name: Orders
+    description: Cryptographically signed order submission, amendment, and cancellation.
+  - name: Accounts & Audit
+    description: Deposits, account balances, Blake3 Merkle inclusion proofs, and global conservation audits.
+  - name: Market & Analytics
+    description: Level-2 snapshots, multi-timeframe OHLCV candles, Volume Profile (POC), Liquidity Heatmap, and OFI/Kyle's Lambda.
+  - name: Fraud & Risk
+    description: Temporal transaction subgraphs, explainable SHAP alerts, and signed risk mitigations.
+  - name: Chronos Time-Travel
+    description: Nanosecond historical seek, counterfactual timeline forking, and VCR playback control.
+  - name: Aegis SRE & Chaos
+    description: Autonomous incident post-mortems, human-in-the-loop policy approvals, and chaos fault campaigns.
+
+components:
+  securitySchemes:
+    BearerJwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Read/UI session JWT token.
+    HyperionSignatureAuth:
+      type: apiKey
+      in: header
+      name: X-Hyperion-Signature
+      description: |
+        Hex-encoded Ed25519 (64B) or HMAC-SHA256 (32B) signature over UTF-8 preimage:
+        `<X-Hyperion-Timestamp>\n<X-Hyperion-Nonce>\n<METHOD>\n<PATH>\n<SHA256_HEX(BODY)>`.
+        Requires companion headers `X-Hyperion-Account-Id`, `X-Hyperion-Key-Id`,
+        `X-Hyperion-Timestamp`, `X-Hyperion-Nonce`, and `X-Hyperion-Auth-Scheme`.
+
+  parameters:
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated unique key (UUIDv4/ULID) preventing duplicate mutation execution.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    AccountIdHeader:
+      name: X-Hyperion-Account-Id
+      in: header
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uint64String"
+    TimestampHeader:
+      name: X-Hyperion-Timestamp
+      in: header
+      required: true
+      description: UTC Unix epoch timestamp in nanoseconds; rejected if skew exceeds 5,000,000,000 ns.
+      schema:
+        $ref: "#/components/schemas/Uint64String"
+    NonceHeader:
+      name: X-Hyperion-Nonce
+      in: header
+      required: true
+      schema:
+        $ref: "#/components/schemas/Uint64String"
+    SymbolQuery:
+      name: symbol
+      in: query
+      required: true
+      schema:
+        $ref: "#/components/schemas/InstrumentSymbol"
+
+  schemas:
+    FixedPointUint:
+      type: string
+      pattern: "^[0-9]{1,39}$"
+      description: Unsigned fixed-point integer string scaled by 10^8 (u64/u128 atomic units).
+      examples:
+        - "6842550000000"
+        - "100000000"
+
+    FixedPointInt:
+      type: string
+      pattern: "^-?[0-9]{1,39}$"
+      description: Signed fixed-point integer string scaled by 10^8 (i64/i128 atomic units).
+      examples:
+        - "-250000"
+        - "150000000000"
+
+    Uint64String:
+      type: string
+      pattern: "^[0-9]{1,20}$"
+      description: Exact unsigned 64-bit integer serialized as decimal string.
+      examples:
+        - "10042"
+
+    HexDigest32:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+      description: 32-byte (256-bit) lowercase hexadecimal Blake3 digest.
+      examples:
+        - "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+
+    InstrumentSymbol:
+      type: string
+      enum:
+        - BTC-USDT
+        - ETH-USDT
+        - SOL-USDT
+        - HYPE-USDT
+
+    OrderSide:
+      type: string
+      enum:
+        - BUY
+        - SELL
+
+    OrderType:
+      type: string
+      enum:
+        - LIMIT
+        - MARKET
+        - IOC
+        - FOK
+        - POST_ONLY
+
+    SelfTradePreventionMode:
+      type: string
+      enum:
+        - NONE
+        - CANCEL_RESTING
+        - CANCEL_AGGRESSING
+        - CANCEL_BOTH
+
+    OrderStatus:
+      type: string
+      enum:
+        - ACCEPTED
+        - PARTIALLY_FILLED
+        - FILLED
+        - CANCELED
+        - MODIFIED
+        - REJECTED
+        - EXPIRED
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - code
+        - message
+        - trace_id
+        - ts_ns
+      properties:
+        code:
+          type: string
+          examples:
+            - RATE_LIMITED
+            - INVALID_SIGNATURE_OR_NONCE
+            - INSUFFICIENT_BALANCE
+        message:
+          type: string
+        reject_reason:
+          type: string
+        trace_id:
+          type: string
+        ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+
+    HealthStatusResponse:
+      type: object
+      required:
+        - status
+        - service
+        - version
+        - ts_ns
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+        service:
+          type: string
+        version:
+          type: string
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+
+    SubmitOrderPayload:
+      type: object
+      required:
+        - client_order_id
+        - account_id
+        - symbol
+        - side
+        - order_type
+        - price_fp
+        - qty_fp
+      properties:
+        client_order_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+        account_id:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        side:
+          $ref: "#/components/schemas/OrderSide"
+        order_type:
+          $ref: "#/components/schemas/OrderType"
+        stp_mode:
+          $ref: "#/components/schemas/SelfTradePreventionMode"
+          default: CANCEL_RESTING
+        price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        max_slippage_bps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+
+    ModifyOrderPayload:
+      type: object
+      required:
+        - account_id
+        - symbol
+        - new_price_fp
+        - new_qty_fp
+      properties:
+        client_order_id:
+          type: string
+        account_id:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        new_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        new_qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+
+    ExecutionFillDto:
+      type: object
+      required:
+        - fill_id
+        - engine_seq
+        - symbol
+        - maker_order_id
+        - taker_order_id
+        - maker_account_id
+        - taker_account_id
+        - aggressor_side
+        - price_fp
+        - qty_fp
+        - notional_fp
+        - maker_fee_fp
+        - taker_fee_fp
+        - exec_ts_ns
+      properties:
+        fill_id:
+          $ref: "#/components/schemas/Uint64String"
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        maker_order_id:
+          $ref: "#/components/schemas/Uint64String"
+        taker_order_id:
+          $ref: "#/components/schemas/Uint64String"
+        maker_account_id:
+          $ref: "#/components/schemas/Uint64String"
+        taker_account_id:
+          $ref: "#/components/schemas/Uint64String"
+        aggressor_side:
+          $ref: "#/components/schemas/OrderSide"
+        price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        notional_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        maker_fee_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        taker_fee_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        exec_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        wal_blake3_hash:
+          $ref: "#/components/schemas/HexDigest32"
+
+    OrderAckDto:
+      type: object
+      required:
+        - engine_seq
+        - order_id
+        - client_order_id
+        - account_id
+        - symbol
+        - status
+        - filled_qty_fp
+        - remaining_qty_fp
+        - avg_fill_price_fp
+        - engine_ts_ns
+      properties:
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        order_id:
+          $ref: "#/components/schemas/Uint64String"
+        client_order_id:
+          type: string
+        account_id:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        reject_reason:
+          type: string
+        reject_detail:
+          type: string
+        filled_qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        remaining_qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        avg_fill_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        engine_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        wal_blake3_hash:
+          $ref: "#/components/schemas/HexDigest32"
+        fills:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExecutionFillDto"
+
+    CreditDepositPayload:
+      type: object
+      required:
+        - deposit_id
+        - account_id
+        - asset
+        - amount_fp
+      properties:
+        deposit_id:
+          type: string
+        account_id:
+          $ref: "#/components/schemas/Uint64String"
+        asset:
+          type: string
+          examples:
+            - USDT
+            - BTC
+        amount_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+
+    PriceLevelDto:
+      type: object
+      required:
+        - price_fp
+        - total_qty_fp
+        - order_count
+      properties:
+        price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        total_qty_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        order_count:
+          type: integer
+          minimum: 0
+
+    L2BookSnapshotDto:
+      type: object
+      required:
+        - engine_seq
+        - symbol
+        - bids
+        - asks
+        - best_bid_fp
+        - best_ask_fp
+        - mid_price_fp
+        - spread_fp
+        - snapshot_ts_ns
+        - state_root_blake3
+      properties:
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        bids:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceLevelDto"
+        asks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceLevelDto"
+        best_bid_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        best_ask_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        mid_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        spread_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        snapshot_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        state_root_blake3:
+          $ref: "#/components/schemas/HexDigest32"
+
+    MerkleProofNodeDto:
+      type: object
+      required:
+        - sibling_hash
+        - is_left_sibling
+        - depth
+      properties:
+        sibling_hash:
+          $ref: "#/components/schemas/HexDigest32"
+        is_left_sibling:
+          type: boolean
+        depth:
+          type: integer
+          minimum: 0
+
+    AccountAssetBalanceDto:
+      type: object
+      required:
+        - asset
+        - available_fp
+        - locked_fp
+        - total_fp
+      properties:
+        asset:
+          type: string
+        available_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        locked_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        total_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+
+    MerkleLedgerProofDto:
+      type: object
+      required:
+        - engine_seq
+        - account_id
+        - balances
+        - leaf_blake3_hash
+        - state_root_blake3
+        - proof_path
+        - system_total_deposits_fp
+        - system_total_user_equity_fp
+        - treasury_fee_pool_fp
+        - double_entry_balanced
+        - proof_ts_ns
+      properties:
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        account_id:
+          $ref: "#/components/schemas/Uint64String"
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountAssetBalanceDto"
+        leaf_blake3_hash:
+          $ref: "#/components/schemas/HexDigest32"
+        state_root_blake3:
+          $ref: "#/components/schemas/HexDigest32"
+        proof_path:
+          type: array
+          items:
+            $ref: "#/components/schemas/MerkleProofNodeDto"
+        system_total_deposits_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        system_total_user_equity_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        treasury_fee_pool_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        double_entry_balanced:
+          type: boolean
+        proof_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+
+    OhlcvCandleDto:
+      type: object
+      required:
+        - symbol
+        - interval
+        - bucket_open_ts_ns
+        - bucket_close_ts_ns
+        - open_fp
+        - high_fp
+        - low_fp
+        - close_fp
+        - base_volume_fp
+        - quote_volume_fp
+        - taker_buy_base_volume_fp
+        - taker_sell_base_volume_fp
+        - vwap_fp
+        - twap_fp
+        - trade_count
+        - is_closed
+      properties:
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        interval:
+          type: string
+          enum: ["1s", "5s", "1m", "5m", "15m", "1h"]
+        bucket_open_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        bucket_close_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        open_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        high_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        low_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        close_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        base_volume_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        quote_volume_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        taker_buy_base_volume_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        taker_sell_base_volume_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        vwap_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        twap_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        trade_count:
+          $ref: "#/components/schemas/Uint64String"
+        is_closed:
+          type: boolean
+
+    MicrostructureDto:
+      type: object
+      required:
+        - symbol
+        - engine_seq
+        - ts_ns
+        - mid_price_fp
+        - spread_fp
+        - spread_bps
+        - rolling_vwap_fp
+        - rolling_twap_fp
+        - ofi_fp
+        - book_imbalance_top5_ppm
+        - book_imbalance_top10_ppm
+        - book_imbalance_top20_ppm
+        - kyles_lambda_fp
+      properties:
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        mid_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        spread_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        spread_bps:
+          type: integer
+        rolling_vwap_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        rolling_twap_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        ofi_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        book_imbalance_top5_ppm:
+          type: integer
+        book_imbalance_top10_ppm:
+          type: integer
+        book_imbalance_top20_ppm:
+          type: integer
+        kyles_lambda_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+
+    SHAPAttributionDto:
+      type: object
+      required:
+        - feature_name
+        - feature_value_fp
+        - baseline_value_fp
+        - shap_contribution_ppm
+        - importance_rank
+      properties:
+        feature_name:
+          type: string
+        feature_value_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        baseline_value_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        shap_contribution_ppm:
+          type: integer
+        importance_rank:
+          type: integer
+          minimum: 1
+
+    AnomalyAlertDto:
+      type: object
+      required:
+        - alert_id
+        - engine_seq
+        - symbol
+        - pattern_type
+        - severity_score
+        - confidence_ppm
+        - offender_account_ids
+        - shap_attributions
+        - detected_ts_ns
+        - inference_latency_us
+      properties:
+        alert_id:
+          type: string
+        engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        pattern_type:
+          type: string
+          enum:
+            - WASH_TRADING_CYCLE
+            - SPOOFING_LAYERING
+            - VELOCITY_SPIKE
+            - MOMENTUM_IGNITION
+            - LATENCY_ARBITRAGE
+        severity_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        confidence_ppm:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        offender_account_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/Uint64String"
+        shap_attributions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SHAPAttributionDto"
+        detected_ts_ns:
+          $ref: "#/components/schemas/Uint64String"
+        inference_latency_us:
+          type: integer
+          minimum: 0
+        model_version:
+          type: string
+
+    TimelineForkPayload:
+      type: object
+      required:
+        - fork_name
+        - symbol
+        - start_engine_seq
+        - end_engine_seq
+      properties:
+        fork_name:
+          type: string
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        start_engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        end_engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        maker_fee_ppm_override:
+          type: ["integer", "null"]
+        taker_fee_ppm_override:
+          type: ["integer", "null"]
+        max_order_qty_fp_override:
+          oneOf:
+            - $ref: "#/components/schemas/FixedPointUint"
+            - type: "null"
+        blocked_account_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/Uint64String"
+
+    StateTreeDiffDto:
+      type: object
+      required:
+        - fork_id
+        - symbol
+        - start_engine_seq
+        - end_engine_seq
+        - baseline_state_root_blake3
+        - forked_state_root_blake3
+        - state_identical
+        - baseline_clearing_price_fp
+        - forked_clearing_price_fp
+        - clearing_price_delta_fp
+        - prevented_wash_volume_fp
+        - replayed_events_count
+        - computation_latency_us
+      properties:
+        fork_id:
+          type: string
+        symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        start_engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        end_engine_seq:
+          $ref: "#/components/schemas/Uint64String"
+        baseline_state_root_blake3:
+          $ref: "#/components/schemas/HexDigest32"
+        forked_state_root_blake3:
+          $ref: "#/components/schemas/HexDigest32"
+        state_identical:
+          type: boolean
+        baseline_clearing_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        forked_clearing_price_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        clearing_price_delta_fp:
+          $ref: "#/components/schemas/FixedPointInt"
+        prevented_wash_volume_fp:
+          $ref: "#/components/schemas/FixedPointUint"
+        prevented_fills_count:
+          $ref: "#/components/schemas/Uint64String"
+        rejected_orders_count:
+          $ref: "#/components/schemas/Uint64String"
+        replayed_events_count:
+          $ref: "#/components/schemas/Uint64String"
+        computation_latency_us:
+          type: integer
+          minimum: 0
+
+    ChaosCampaignPayload:
+      type: object
+      required:
+        - regime
+        - enabled
+      properties:
+        regime:
+          type: string
+          enum:
+            - CALM
+            - HIGH_VOLATILITY
+            - FLASH_CRASH
+            - SPOOFING_ATTACK
+            - WASH_TRADING_RING
+            - BURST_TSUNAMI_20X
+            - NETWORK_PARTITION
+        enabled:
+          type: boolean
+        seed:
+          $ref: "#/components/schemas/Uint64String"
+        target_symbol:
+          $ref: "#/components/schemas/InstrumentSymbol"
+        duration_ms:
+          type: integer
+          minimum: 100
+          maximum: 3600000
+
+paths:
+  /healthz:
+    get:
+      tags: [System]
+      operationId: getGatewayHealth
+      summary: Gateway liveness & upstream circuit-breaker health check
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatusResponse"
+
+  /api/v1/orders:
+    post:
+      tags: [Orders]
+      operationId: submitOrder
+      summary: Submit a cryptographically signed fixed-point order
+      security:
+        - HyperionSignatureAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+        - $ref: "#/components/parameters/AccountIdHeader"
+        - $ref: "#/components/parameters/TimestampHeader"
+        - $ref: "#/components/parameters/NonceHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitOrderPayload"
+      responses:
+        "200":
+          description: Deterministic OrderAck from LMAX single-writer matching engine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderAckDto"
+        "401":
+          description: Invalid Ed25519/HMAC signature, expired timestamp, or replayed nonce
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Hybrid L1/L2 token-bucket rate limit or Aegis risk throttle triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /api/v1/orders/{order_id}:
+    patch:
+      tags: [Orders]
+      operationId: modifyOrder
+      summary: Amend price and/or quantity of a resting order
+      security:
+        - HyperionSignatureAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+        - $ref: "#/components/parameters/AccountIdHeader"
+        - $ref: "#/components/parameters/TimestampHeader"
+        - $ref: "#/components/parameters/NonceHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyOrderPayload"
+      responses:
+        "200":
+          description: Order modified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderAckDto"
+    delete:
+      tags: [Orders]
+      operationId: cancelOrder
+      summary: Cancel a resting order on the Limit Order Book
+      security:
+        - HyperionSignatureAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+        - $ref: "#/components/parameters/SymbolQuery"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+        - $ref: "#/components/parameters/AccountIdHeader"
+        - $ref: "#/components/parameters/TimestampHeader"
+        - $ref: "#/components/parameters/NonceHeader"
+      responses:
+        "200":
+          description: Cancellation acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderAckDto"
+
+  /api/v1/accounts/deposits:
+    post:
+      tags: [Accounts & Audit]
+      operationId: creditDeposit
+      summary: Credit fixed-point asset deposit via double-entry ledger journal
+      security:
+        - BearerJwtAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditDepositPayload"
+      responses:
+        "200":
+          description: Deposit committed to Blake3 WAL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountAssetBalanceDto"
+
+  /api/v1/accounts/{account_id}/merkle-proof:
+    get:
+      tags: [Accounts & Audit]
+      operationId: getMerkleLedgerProof
+      summary: Retrieve cryptographic Blake3 Merkle inclusion proof & conservation attestation
+      security:
+        - BearerJwtAuth: []
+      parameters:
+        - name: account_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+        - name: at_engine_seq
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+      responses:
+        "200":
+          description: Verified Blake3 Merkle inclusion proof
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MerkleLedgerProofDto"
+
+  /api/v1/market/orderbook:
+    get:
+      tags: [Market & Analytics]
+      operationId: getL2Orderbook
+      summary: Fetch deterministic Level-2 order book snapshot
+      parameters:
+        - $ref: "#/components/parameters/SymbolQuery"
+        - name: depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+      responses:
+        "200":
+          description: Current Level-2 snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/L2BookSnapshotDto"
+
+  /api/v1/analytics/candles:
+    get:
+      tags: [Market & Analytics]
+      operationId: getCandles
+      summary: Query multi-timeframe OHLCV candlesticks with aggressive taker buy/sell breakdown
+      parameters:
+        - $ref: "#/components/parameters/SymbolQuery"
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["1s", "5s", "1m", "5m", "15m", "1h"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 300
+      responses:
+        "200":
+          description: Ordered candlestick array
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OhlcvCandleDto"
+
+  /api/v1/analytics/microstructure:
+    get:
+      tags: [Market & Analytics]
+      operationId: getMicrostructureMetrics
+      summary: Fetch real-time VWAP, TWAP, OFI, Book Imbalance (5/10/20), and Kyle's Lambda
+      parameters:
+        - $ref: "#/components/parameters/SymbolQuery"
+      responses:
+        "200":
+          description: Latest microstructure metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MicrostructureDto"
+
+  /api/v1/fraud/alerts:
+    get:
+      tags: [Fraud & Risk]
+      operationId: listFraudAlerts
+      summary: List recent Sentinel-ML anomaly alerts with local SHAP feature attributions
+      security:
+        - BearerJwtAuth: []
+      parameters:
+        - name: symbol
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/InstrumentSymbol"
+        - name: min_severity
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Recent anomaly alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnomalyAlertDto"
+
+  /api/v1/chronos/seek:
+    get:
+      tags: [Chronos Time-Travel]
+      operationId: chronosSeek
+      summary: Reconstruct exact historical L2/L3 orderbook & ledger state at nanosecond or sequence T
+      security:
+        - BearerJwtAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SymbolQuery"
+        - name: target_engine_seq
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+        - name: target_ts_ns
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Uint64String"
+      responses:
+        "200":
+          description: Reconstructed historical point-in-time snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/L2BookSnapshotDto"
+
+  /api/v1/chronos/fork:
+    post:
+      tags: [Chronos Time-Travel]
+      operationId: chronosForkTimeline
+      summary: Execute counterfactual What-If timeline fork and compute StateTreeDiff
+      security:
+        - BearerJwtAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimelineForkPayload"
+      responses:
+        "200":
+          description: Counterfactual StateTreeDiff against production baseline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StateTreeDiffDto"
+
+  /api/v1/chaos/campaigns:
+    post:
+      tags: [Aegis SRE & Chaos]
+      operationId: triggerChaosCampaign
+      summary: Start or stop deterministic market regime & network fault injection campaign
+      security:
+        - BearerJwtAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChaosCampaignPayload"
+      responses:
+        "200":
+          description: Chaos campaign state updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [campaign_id, active, regime]
+                properties:
+                  campaign_id:
+                    type: string
+                  active:
+                    type: boolean
+                  regime:
+                    type: string

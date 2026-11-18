@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package hyperion.v1;
+
+import "common.proto";
+
+option go_package = "github.com/vanovri/hyperion/contracts/gen/go/hyperionv1;hyperionv1";
+
+// Supported multi-timeframe OHLCV candlestick intervals.
+enum CandleInterval {
+  CANDLE_INTERVAL_UNSPECIFIED = 0;
+  CANDLE_INTERVAL_1S = 1;
+  CANDLE_INTERVAL_5S = 2;
+  CANDLE_INTERVAL_1M = 3;
+  CANDLE_INTERVAL_5M = 4;
+  CANDLE_INTERVAL_15M = 5;
+  CANDLE_INTERVAL_1H = 6;
+}
+
+// Fixed-point OHLCV + aggressive flow candlestick computed by stream-aggregator.
+message OhlcvCandle {
+  string symbol = 1;
+  CandleInterval interval = 2;
+  uint64 bucket_open_ts_ns = 3;
+  uint64 bucket_close_ts_ns = 4;
+  uint64 open_fp = 5;
+  uint64 high_fp = 6;
+  uint64 low_fp = 7;
+  uint64 close_fp = 8;
+  U128 base_volume_fp = 9;
+  U128 quote_volume_fp = 10;
+  U128 taker_buy_base_volume_fp = 11;
+  U128 taker_sell_base_volume_fp = 12;
+  uint64 vwap_fp = 13;
+  uint64 twap_fp = 14;
+  uint64 trade_count = 15;
+  uint64 last_engine_seq = 16;
+  bool is_closed = 17;
+}
+
+// Real-time quantitative market microstructure snapshot per instrument.
+message MicrostructureMetrics {
+  string symbol = 1;
+  uint64 engine_seq = 2;
+  uint64 ts_ns = 3;
+  uint64 mid_price_fp = 4;
+  uint64 spread_fp = 5;
+  uint32 spread_bps = 6;
+  uint64 rolling_vwap_fp = 7;
+  uint64 rolling_twap_fp = 8;
+  // Signed Order Flow Imbalance in fixed-point base units (scale 1e8).
+  I128 ofi_fp = 9;
+  // Book Imbalance Ratio (Bid - Ask) / (Bid + Ask) in signed ppm [-1_000_000, +1_000_000].
+  int64 book_imbalance_top5_ppm = 10;
+  int64 book_imbalance_top10_ppm = 11;
+  int64 book_imbalance_top20_ppm = 12;
+  // Kyle's Lambda price-impact coefficient scaled by 1e8.
+  int64 kyles_lambda_fp = 13;
+}
+
+// Single price-bucket cell in a time-series liquidity depth heatmap matrix.
+message LiquidityHeatmapBucket {
+  uint64 bucket_ts_ns = 1;
+  uint64 price_bucket_fp = 2;
+  uint64 resting_bid_qty_fp = 3;
+  uint64 resting_ask_qty_fp = 4;
+}
+
+// Horizontal Volume Profile histogram bin & Point of Control (POC) component.
+message VolumeProfileBin {
+  uint64 price_bucket_fp = 1;
+  U128 buy_volume_fp = 2;
+  U128 sell_volume_fp = 3;
+  U128 total_volume_fp = 4;
+}
+
+message GetCandlesRequest {
+  string symbol = 1;
+  CandleInterval interval = 2;
+  uint64 from_ts_ns = 3;
+  uint64 to_ts_ns = 4;
+  uint32 limit = 5;
+}
+
+message GetCandlesResponse {
+  repeated OhlcvCandle candles = 1;
+}
+
+message GetVolumeProfileRequest {
+  string symbol = 1;
+  uint64 from_ts_ns = 2;
+  uint64 to_ts_ns = 3;
+  uint64 bucket_size_fp = 4;
+}
+
+message GetVolumeProfileResponse {
+  string symbol = 1;
+  uint64 poc_price_fp = 2;
+  uint64 value_area_high_fp = 3;
+  uint64 value_area_low_fp = 4;
+  repeated VolumeProfileBin bins = 5;
+}
+
+message GetLiquidityHeatmapRequest {
+  string symbol = 1;
+  uint64 from_ts_ns = 2;
+  uint64 to_ts_ns = 3;
+  uint64 price_bucket_size_fp = 4;
+  uint64 time_bucket_ns = 5;
+}
+
+message GetLiquidityHeatmapResponse {
+  string symbol = 1;
+  repeated LiquidityHeatmapBucket buckets = 2;
+}
+
+message GetLatestMicrostructureRequest {
+  string symbol = 1;
+}
+
+message GetLatestMicrostructureResponse {
+  MicrostructureMetrics metrics = 1;
+}
+
+// Primary gRPC interface exposed by services/stream-aggregator on port 50152.
+service StreamAnalyticsService {
+  rpc GetCandles(GetCandlesRequest) returns (GetCandlesResponse);
+  rpc GetVolumeProfile(GetVolumeProfileRequest) returns (GetVolumeProfileResponse);
+  rpc GetLiquidityHeatmap(GetLiquidityHeatmapRequest) returns (GetLiquidityHeatmapResponse);
+  rpc GetLatestMicrostructure(GetLatestMicrostructureRequest) returns (GetLatestMicrostructureResponse);
+}

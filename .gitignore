@@ -1,0 +1,61 @@
+# ==============================================================================
+# HYPERION MONOREPO — ROOT GITIGNORE
+# ==============================================================================
+
+# Rust
+target/
+**/*.rs.bk
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work.sum
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+*.egg-info/
+dist/
+build/
+!contracts/gen/ts/dist/
+
+# Node / TypeScript / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+playwright-report/
+test-results/
+
+# Local runtime state, WAL segments, snapshots, local volumes
+.data/
+data/wal/
+data/snapshots/
+*.wal
+*.snap
+.env
+.env.local
+.env.*.local
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
