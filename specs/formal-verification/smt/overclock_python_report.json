@@ -1,0 +1,22 @@
+{
+  "ast_mutation_audit": {
+    "total_mutants": 36,
+    "killed_mutants": 35,
+    "survived_mutants": 1,
+    "survived_details": [
+      "line 3: Compare Lt -> LtE"
+    ],
+    "mutation_kill_score_pct": 97.22,
+    "elapsed_ms": 361.87
+  },
+  "python_500k_soak": {
+    "soak_cycles": 500000,
+    "mem_after_warmup_bytes": 292,
+    "mem_after_500k_bytes": 324,
+    "peak_traced_bytes": 736,
+    "steady_state_leak_bytes": 32,
+    "elapsed_sec": 43.307,
+    "ops_per_sec": 11545.4,
+    "checksum": 0
+  }
+}

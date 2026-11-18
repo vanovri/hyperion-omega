@@ -1,0 +1,20 @@
+{
+  "name": "@hyperion/omega-contracts",
+  "version": "0.2.0",
+  "description": "Canonical Protobuf v3 (bigint-strict) and governance constants for HYPERION OMEGA (Channels 11-20)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test dist/omega.test.js"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "ts-proto": "^2.6.1",
+    "typescript": "^5.7.3"
+  }
+}

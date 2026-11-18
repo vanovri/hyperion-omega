@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package hyperion.omega.v1;
+
+import "common.proto";
+import "omega/zk_solvency.proto";
+
+option go_package = "github.com/vanovri/hyperion/proto/omega/gen/go/omegav1;omegav1";
+
+// Confirmation lifecycle of an L2 vault deposit tracked by chain-relayer-go.
+enum DepositFinalityStatus {
+  DEPOSIT_FINALITY_STATUS_UNSPECIFIED = 0;
+  DEPOSIT_FINALITY_STATUS_MEMPOOL_SEEN = 1;
+  DEPOSIT_FINALITY_STATUS_SOFT_CONFIRMED = 2;
+  DEPOSIT_FINALITY_STATUS_FINALIZED_CREDITED = 3;
+  DEPOSIT_FINALITY_STATUS_REORG_ORPHANED_REVOKED = 4;
+}
+
+// Lifecycle status of an EIP-712 structured withdrawal or Censorship Escape-Hatch exit.
+enum WithdrawalSettlementStatus {
+  WITHDRAWAL_SETTLEMENT_STATUS_UNSPECIFIED = 0;
+  WITHDRAWAL_SETTLEMENT_STATUS_QUEUED_OUTBOX = 1;
+  WITHDRAWAL_SETTLEMENT_STATUS_SUBMITTED_ONCHAIN = 2;
+  WITHDRAWAL_SETTLEMENT_STATUS_FINALIZED_SETTLED = 3;
+  WITHDRAWAL_SETTLEMENT_STATUS_REJECTED_REPLAY_OR_EXPIRED = 4;
+  WITHDRAWAL_SETTLEMENT_STATUS_FORCED_ESCAPE_HATCH_SETTLED = 5;
+}
+
+// Finalized on-chain deposit event emitted ONLY after confirmations >= min_finality_blocks.
+message DepositFinalized {
+  string deposit_id = 1;
+  uint64 chain_id = 2;
+  // 20-byte EVM contract address of HyperionVault.sol.
+  bytes vault_contract_address = 3;
+  // Monotonic deposit sequence assigned by HyperionVault.sol on-chain.
+  uint64 onchain_deposit_nonce = 4;
+  uint64 account_id = 5;
+  bytes depositor_evm_address = 6;
+  // 20-byte ERC-20 token address (0x00..00 for native ETH).
+  bytes token_contract_address = 7;
+  string asset_symbol = 8;
+  // Exact credited amount converted to HYPERION fixed-point (scale 1e8).
+  hyperion.v1.U128 amount_fp = 9;
+  bytes l2_tx_hash = 10;
+  uint32 log_index = 11;
+  uint64 block_number = 12;
+  bytes block_hash = 13;
+  uint32 confirmations = 14;
+  DepositFinalityStatus finality_status = 15;
+  uint64 finalized_ts_ns = 16;
+  hyperion.v1.TraceMetadata trace = 17;
+}
+
+// EIP-712 typed structured withdrawal intent immune to cross-chain, cross-epoch, and reorg replay.
+message WithdrawalEIP712Intent {
+  string withdrawal_id = 1;
+  // EIP-712 Domain chainId binding this signature to one exact L2 network.
+  uint64 chain_id = 2;
+  // 20-byte verifyingContract address of HyperionVault.sol.
+  bytes verifying_vault_address = 3;
+  uint64 account_id = 4;
+  bytes recipient_evm_address = 5;
+  bytes token_contract_address = 6;
+  string asset_symbol = 7;
+  // Exact withdrawal amount in fixed-point (scale 1e8).
+  hyperion.v1.U128 amount_fp = 8;
+  // Bridge fee deducted in fixed-point (scale 1e8).
+  hyperion.v1.U128 bridge_fee_fp = 9;
+  // Strict per-account withdrawal replay nonce committed in HyperionVault.sol.
+  uint64 withdrawal_nonce = 10;
+  // Solvency epoch binding this withdrawal to a committed Merkle-Sum state anchor.
+  uint64 epoch_id = 11;
+  // Unix timestamp (seconds) after which HyperionVault.sol rejects the intent.
+  uint64 deadline_unix_sec = 12;
+  // 32-byte keccak256 EIP-712 struct digest (\x19\x01 || domainSeparator || structHash).
+  bytes eip712_digest = 13;
+  // 32-byte unique nullifier keccak256(chain_id || vault || account_id || withdrawal_nonce || epoch_id).
+  bytes nullifier_hash = 14;
+  // 65-byte secp256k1 ECDSA signature (r || s || v, with lower-half s malleability check).
+  bytes secp256k1_signature = 15;
+  uint64 ledger_debit_engine_seq = 16;
+  WithdrawalSettlementStatus status = 17;
+  uint64 created_ts_ns = 18;
+  hyperion.v1.TraceMetadata trace = 19;
+}
+
+// Periodic L2 batch anchor committing off-chain Ledger + Merkle-Sum + ZK-Solvency root to SolvencyStateAnchor.sol.
+message StateRootBatchCommit {
+  uint64 batch_id = 1;
+  uint64 epoch_id = 2;
+  uint64 chain_id = 3;
+  bytes state_anchor_contract = 4;
+  uint64 start_engine_seq = 5;
+  uint64 end_engine_seq = 6;
+  uint64 raft_commit_index = 7;
+  // Previous epoch's Merkle-Sum root hash (enforces unbroken on-chain state continuity).
+  bytes prev_merkle_sum_root = 8;
+  bytes new_merkle_sum_root = 9;
+  hyperion.v1.U128 declared_liabilities_fp = 10;
+  hyperion.v1.U128 verified_vault_reserves_fp = 11;
+  bytes zk_solvency_proof_bytes = 12;
+  bytes l2_commit_tx_hash = 13;
+  uint64 l2_block_number = 14;
+  bytes l2_block_hash = 15;
+  uint64 max_fee_per_gas_wei = 16;
+  uint64 max_priority_fee_per_gas_wei = 17;
+  uint64 gas_used = 18;
+  uint64 committed_ts_ns = 19;
+  hyperion.v1.TraceMetadata trace = 20;
+}
+
+// High-priority alert emitted by chain-relayer-go when parentHash sliding-window detects an L2 chain reorg.
+message ChainReorgAlert {
+  string reorg_id = 1;
+  uint64 chain_id = 2;
+  // Highest block number shared between old orphaned branch and new canonical branch.
+  uint64 common_ancestor_block_number = 3;
+  bytes common_ancestor_block_hash = 4;
+  uint64 orphaned_tip_block_number = 5;
+  bytes orphaned_tip_block_hash = 6;
+  uint64 new_canonical_tip_block_number = 7;
+  bytes new_canonical_tip_block_hash = 8;
+  // Number of reverted blocks (1..12+); triggers automatic rollback of unfinalized staging deposits.
+  uint32 reorg_depth = 9;
+  repeated string revoked_staged_deposit_ids = 10;
+  repeated string requeued_outbox_tx_ids = 11;
+  uint64 detected_ts_ns = 12;
+  hyperion.v1.TraceMetadata trace = 13;
+}
+
+// Trustless Censorship Escape-Hatch payload submitted directly to CensorshipEscapeHatch.sol on sequencer liveness failure.
+message EscapeHatchForcedExit {
+  string exit_id = 1;
+  uint64 chain_id = 2;
+  uint64 account_id = 3;
+  bytes claimant_evm_address = 4;
+  uint64 anchored_epoch_id = 5;
+  uint64 sequencer_inactivity_blocks = 6;
+  InclusionSumProof merkle_inclusion_proof = 7;
+  bytes l2_exit_tx_hash = 8;
+  uint64 settled_ts_ns = 9;
+}
+
+message SubmitWithdrawalIntentResponse {
+  string withdrawal_id = 1;
+  bytes nullifier_hash = 2;
+  WithdrawalSettlementStatus status = 3;
+  string reject_reason = 4;
+}
+
+message AnchorStateRootBatchResponse {
+  uint64 batch_id = 1;
+  uint64 epoch_id = 2;
+  bool anchored = 3;
+  bytes l2_commit_tx_hash = 4;
+  uint64 l2_block_number = 5;
+  StateRootBatchCommit committed_batch = 6;
+}
+
+message GetRelayerStatusRequest {
+  uint64 chain_id = 1;
+}
+
+message RelayerStatusResponse {
+  uint64 chain_id = 1;
+  uint64 latest_observed_block = 2;
+  uint64 latest_finalized_block = 3;
+  uint64 latest_anchored_epoch_id = 4;
+  uint32 pending_outbox_count = 5;
+  uint64 total_reorgs_handled = 6;
+  bool escape_hatch_frozen_mode = 7;
+}
+
+message StreamSettlementEventsRequest {
+  uint64 chain_id = 1;
+}
+
+message SettlementEventEnvelope {
+  uint64 chain_id = 1;
+  uint64 ts_ns = 2;
+  oneof event {
+    DepositFinalized deposit_finalized = 3;
+    WithdrawalEIP712Intent withdrawal_intent = 4;
+    StateRootBatchCommit batch_commit = 5;
+    ChainReorgAlert reorg_alert = 6;
+    EscapeHatchForcedExit forced_exit = 7;
+  }
+}
+
+// Primary gRPC interface exposed by services/chain-relayer-go on port 50167.
+service L2SettlementService {
+  rpc SubmitWithdrawalIntent(WithdrawalEIP712Intent) returns (SubmitWithdrawalIntentResponse);
+  rpc AnchorStateRootBatch(StateRootBatchCommit) returns (AnchorStateRootBatchResponse);
+  rpc GetRelayerStatus(GetRelayerStatusRequest) returns (RelayerStatusResponse);
+  rpc StreamSettlementEvents(StreamSettlementEventsRequest) returns (stream SettlementEventEnvelope);
+}

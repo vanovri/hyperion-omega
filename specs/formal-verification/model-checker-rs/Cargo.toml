@@ -1,0 +1,11 @@
+[package]
+name = "hyperion-omega-model-checker"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Exhaustive Explicit-State BFS & Post-Partition Liveness Model Checker for HYPERION OMEGA (Raft + PreVote + Chained WAL + L2 Settlement)"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

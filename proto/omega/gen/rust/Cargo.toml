@@ -1,0 +1,16 @@
+[package]
+name = "hyperion-omega-proto"
+version = "0.2.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Canonical Protobuf v3, gRPC services, and fixed-point contracts for HYPERION OMEGA (Channels 11-20)"
+
+[dependencies]
+bytes = "1.8"
+hyperion-proto = { path = "../../../../contracts/gen/rust" }
+prost = "0.13"
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+
+[build-dependencies]
+prost-build = "0.13"
+tonic-build = "0.12"

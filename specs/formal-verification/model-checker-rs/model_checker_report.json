@@ -1,0 +1,35 @@
+{
+  "suite": "HYPERION_OMEGA_CH11_EXPLICIT_STATE_MODEL_CHECKER",
+  "status": "PASS",
+  "distinct_states": 498617,
+  "explored_transitions": 1250017,
+  "max_bfs_depth": 6,
+  "post_heal_liveness_states_verified": 12000,
+  "max_liveness_recovery_steps": 9,
+  "elapsed_ms": 6056.489,
+  "transitions_per_sec": 206393.0,
+  "state_graph_digest_hex": "0x5e7ce5fbadc08d6e",
+  "invariants_verified": [
+    "ElectionSafety",
+    "LogMatching",
+    "WalHashChainIntegrity",
+    "ZeroCommittedDataLoss",
+    "LeaderCompleteness",
+    "L2SettlementSafety",
+    "PostHealLiveness"
+  ],
+  "telemetry": {
+    "prevote_elections": 67945,
+    "message_deliveries": 201633,
+    "client_proposals": 54515,
+    "stale_leader_writes": 8609,
+    "partition_injections": 265506,
+    "partition_heals": 33272,
+    "node_crashes": 146559,
+    "node_restarts": 20783,
+    "duplicate_messages": 141700,
+    "message_drops": 268638,
+    "l2_batch_actions": 91,
+    "l2_shallow_reorgs": 4
+  }
+}

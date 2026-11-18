@@ -1,0 +1,219 @@
+syntax = "proto3";
+
+package hyperion.omega.v1;
+
+import "common.proto";
+import "orderbook.proto";
+
+option go_package = "github.com/vanovri/hyperion/proto/omega/gen/go/omegav1;omegav1";
+
+// Role of a node inside the 5-node deterministic Raft consensus cluster.
+enum RaftNodeRole {
+  RAFT_NODE_ROLE_UNSPECIFIED = 0;
+  RAFT_NODE_ROLE_FOLLOWER = 1;
+  RAFT_NODE_ROLE_PRE_CANDIDATE = 2;
+  RAFT_NODE_ROLE_CANDIDATE = 3;
+  RAFT_NODE_ROLE_LEADER = 4;
+  RAFT_NODE_ROLE_LEARNER = 5;
+}
+
+// Payload classification for replicated Raft WAL entries.
+enum RaftEntryKind {
+  RAFT_ENTRY_KIND_UNSPECIFIED = 0;
+  RAFT_ENTRY_KIND_NOOP_BARRIER = 1;
+  RAFT_ENTRY_KIND_LEDGER_EVENT = 2;
+  RAFT_ENTRY_KIND_JOINT_CONFIG_ENTER = 3;
+  RAFT_ENTRY_KIND_JOINT_CONFIG_COMMIT = 4;
+}
+
+// Peer descriptor used in Joint Consensus (C_old,new) dynamic membership changes.
+message RaftNodePeer {
+  uint64 node_id = 1;
+  string peer_addr = 2;
+  bool is_voting_voter = 3;
+}
+
+// Joint Consensus membership configuration (supports atomic C_old -> C_old,new -> C_new).
+message JointConsensusConfig {
+  uint64 config_index = 1;
+  repeated RaftNodePeer current_voters = 2;
+  // Non-empty only while transitioning inside joint consensus C_{old,new}.
+  repeated RaftNodePeer previous_voters = 3;
+  repeated RaftNodePeer learners = 4;
+}
+
+// Single replicated log entry protected by CRC32C bit-rot checksum & Blake3 hash chain.
+message RaftLogEntry {
+  uint64 term = 1;
+  uint64 index = 2;
+  uint64 engine_seq = 3;
+  uint64 ts_ns = 4;
+  RaftEntryKind kind = 5;
+  // Castagnoli CRC-32C checksum for silent disk corruption (bit-rot) detection.
+  uint32 crc32c_checksum = 6;
+  // 32-byte Blake3 hash of (index - 1) frame, aligning with HYPWAL01 chain.
+  bytes prev_blake3_hash = 7;
+  // 32-byte Blake3 hash committing this entry: blake3(term || index || prev_blake3 || payload).
+  bytes entry_blake3_hash = 8;
+  oneof command {
+    hyperion.v1.MarketEventEnvelope ledger_envelope = 9;
+    JointConsensusConfig membership_change = 10;
+    bytes raw_command_bytes = 11;
+  }
+}
+
+// Pipelined & batched Raft log replication + leader heartbeat RPC message.
+message AppendEntries {
+  uint64 cluster_id = 1;
+  uint64 term = 2;
+  uint64 leader_id = 3;
+  uint64 prev_log_index = 4;
+  uint64 prev_log_term = 5;
+  // 32-byte Blake3 digest at prev_log_index to enforce cryptographic log matching.
+  bytes prev_log_blake3 = 6;
+  repeated RaftLogEntry entries = 7;
+  uint64 leader_commit_index = 8;
+  // Monotonic pipeline batch sequence number for out-of-order/duplicate transport deduplication.
+  uint64 pipeline_seq = 9;
+  // Leader monotonic lease expiration horizon in nanoseconds (bounded clock-skew safe).
+  uint64 leader_lease_until_ns = 10;
+  hyperion.v1.TraceMetadata trace = 11;
+}
+
+message AppendEntriesResponse {
+  uint64 term = 1;
+  uint64 follower_id = 2;
+  bool success = 3;
+  uint64 match_index = 4;
+  // Fast log-backtracking hint when success == false (Ongaro conflict optimization).
+  uint64 conflict_index = 5;
+  uint64 conflict_term = 6;
+  uint64 pipeline_seq = 7;
+  bool bit_rot_detected = 8;
+}
+
+// Standard Raft election vote request (invoked ONLY after PreVote quorum succeeds).
+message RequestVote {
+  uint64 cluster_id = 1;
+  uint64 term = 2;
+  uint64 candidate_id = 3;
+  uint64 last_log_index = 4;
+  uint64 last_log_term = 5;
+  bytes last_log_blake3 = 6;
+  hyperion.v1.TraceMetadata trace = 7;
+}
+
+message RequestVoteResponse {
+  uint64 term = 1;
+  uint64 voter_id = 2;
+  bool vote_granted = 3;
+  string reject_reason = 4;
+}
+
+// Pre-Vote RPC (§9.6 Raft): prevents partitioned nodes from inflating cluster term upon rejoin.
+message PreVote {
+  uint64 cluster_id = 1;
+  // Hypothetical next_term = follower.current_term + 1 (not yet persisted to disk).
+  uint64 prospective_term = 2;
+  uint64 candidate_id = 3;
+  uint64 last_log_index = 4;
+  uint64 last_log_term = 5;
+  bytes last_log_blake3 = 6;
+  hyperion.v1.TraceMetadata trace = 7;
+}
+
+message PreVoteResponse {
+  uint64 current_term = 1;
+  uint64 voter_id = 2;
+  bool vote_granted = 3;
+  bool leader_lease_active = 4;
+}
+
+// Streaming log-compaction snapshot chunk aligned with HYPSNP01 Blake3 state roots.
+message InstallSnapshot {
+  uint64 cluster_id = 1;
+  uint64 term = 2;
+  uint64 leader_id = 3;
+  uint64 last_included_index = 4;
+  uint64 last_included_term = 5;
+  uint64 last_included_engine_seq = 6;
+  bytes state_root_blake3 = 7;
+  JointConsensusConfig cluster_config = 8;
+  uint64 byte_offset = 9;
+  bytes chunk_data = 10;
+  uint32 chunk_crc32c = 11;
+  bool done = 12;
+  hyperion.v1.TraceMetadata trace = 13;
+}
+
+message InstallSnapshotResponse {
+  uint64 term = 1;
+  uint64 follower_id = 2;
+  uint64 bytes_stored = 3;
+  bool checksum_valid = 4;
+}
+
+// Linearizable quorum read barrier (§6.4 ReadIndex) avoiding disk log writes on read path.
+message ReadIndexBarrier {
+  string read_request_id = 1;
+  uint64 term = 2;
+  uint64 leader_id = 3;
+  // Committed Raft log index at the instant the ReadIndex request arrived at Leader.
+  uint64 required_read_index = 4;
+  uint64 quorum_ack_mask = 5;
+  bool served_via_leader_lease = 6;
+  uint64 barrier_latency_ns = 7;
+  bytes committed_state_root_blake3 = 8;
+  hyperion.v1.TraceMetadata trace = 9;
+}
+
+message ReadIndexBarrierRequest {
+  string read_request_id = 1;
+  bool allow_leader_lease_fast_path = 2;
+  hyperion.v1.TraceMetadata trace = 3;
+}
+
+message ProposeLedgerEntryRequest {
+  string idempotency_key = 1;
+  hyperion.v1.MarketEventEnvelope envelope = 2;
+  hyperion.v1.TraceMetadata trace = 3;
+}
+
+message ProposeLedgerEntryResponse {
+  bool committed = 1;
+  uint64 term = 2;
+  uint64 log_index = 3;
+  uint64 leader_id = 4;
+  bytes entry_blake3_hash = 5;
+  string error_detail = 6;
+}
+
+message GetRaftClusterStatusRequest {
+  uint64 node_id = 1;
+}
+
+message RaftClusterStatus {
+  uint64 cluster_id = 1;
+  uint64 node_id = 2;
+  RaftNodeRole role = 3;
+  uint64 current_term = 4;
+  uint64 voted_for = 5;
+  uint64 leader_id = 6;
+  uint64 commit_index = 7;
+  uint64 last_applied_index = 8;
+  uint64 last_log_index = 9;
+  uint64 last_log_term = 10;
+  bytes last_committed_blake3 = 11;
+  JointConsensusConfig active_config = 12;
+}
+
+// Primary gRPC interface exposed by services/consensus-raft-rs on port 50161 (peers 50201-50205).
+service RaftConsensusService {
+  rpc AppendEntriesRpc(AppendEntries) returns (AppendEntriesResponse);
+  rpc RequestVoteRpc(RequestVote) returns (RequestVoteResponse);
+  rpc PreVoteRpc(PreVote) returns (PreVoteResponse);
+  rpc InstallSnapshotRpc(stream InstallSnapshot) returns (InstallSnapshotResponse);
+  rpc WaitReadIndexBarrier(ReadIndexBarrierRequest) returns (ReadIndexBarrier);
+  rpc ProposeLedgerEntry(ProposeLedgerEntryRequest) returns (ProposeLedgerEntryResponse);
+  rpc GetClusterStatus(GetRaftClusterStatusRequest) returns (RaftClusterStatus);
+}

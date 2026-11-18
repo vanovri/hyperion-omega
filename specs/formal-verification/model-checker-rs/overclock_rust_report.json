@@ -1,0 +1,21 @@
+{
+  "mutation_gate": {
+    "killed": 20,
+    "total": 20,
+    "score_pct": 100.00,
+    "elapsed_ms": 93.52
+  },
+  "soak_500k_gate": {
+    "cycles": 500000,
+    "warmup_cap_bytes": 58368,
+    "final_cap_bytes": 58368,
+    "steady_state_leak_bytes": 0,
+    "cycles_per_sec": 720084.2,
+    "elapsed_ms": 694.36
+  },
+  "micro_opt_passes": [
+    {"pass": "Pass 1: Baseline (Heap Vec/String + SipHash-1-3)", "p50_ns": 1974.10, "p99_ns": 7144.20, "bytes_per_op": 337, "allocs_per_op": 9},
+    {"pass": "Pass 2: Zero-Copy Flat Stack Arrays + FxHash64", "p50_ns": 663.90, "p99_ns": 4480.70, "bytes_per_op": 0, "allocs_per_op": 0},
+    {"pass": "Pass 3: #[repr(C, align(64))] Cache-Line + Branchless Unrolled", "p50_ns": 9.80, "p99_ns": 10.60, "bytes_per_op": 0, "allocs_per_op": 0}
+  ]
+}

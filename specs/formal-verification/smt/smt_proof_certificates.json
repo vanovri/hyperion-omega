@@ -1,0 +1,148 @@
+{
+  "suite": "HYPERION_OMEGA_CH11_Z3_SMT_PROOFS",
+  "z3_version": "5.4.1",
+  "total_checks": 15,
+  "unsat_invariants_proven": 11,
+  "unsat_invariants_expected": 11,
+  "adversarial_mutants_caught_sat": 4,
+  "adversarial_mutants_expected": 4,
+  "all_verified": true,
+  "total_elapsed_ms": 1811.616,
+  "proofs": [
+    {
+      "theorem_id": "T1.1-I128-OVERFLOW-FREEDOM",
+      "title": "Full 64-Bit Domain u128/i128 Notional & Fee Overflow Freedom",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 220.107,
+      "details": "Proven UNSAT across all price_fp, qty_fp in [0, 2^64-1] and fee_ppm in [-1e6, +1e6]: 0 overflows in u128/i128."
+    },
+    {
+      "theorem_id": "T1.1B-QFBV-HARDWARE-U128-AND-SDIV",
+      "title": "QF_BV Bit-Exact 64x64->128 Bound & Two's-Complement SDiv == trunc_div",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 201.917,
+      "details": "Bit-blasted QF_BV UNSAT: u64::MAX^2 exact in u128 & hardware two's-complement signed `/` == trunc_div."
+    },
+    {
+      "theorem_id": "T1.2-PARTIAL-FILL-CONSERVATION-K4",
+      "title": "Double-Entry Base & Quote Conservation Across K=4 Arbitrary 64-Bit Partial Fills",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 41.869,
+      "details": "Proven UNSAT for K=4 partial fills + remainder release across [1, 2^64-1]: 0 atomic ticks created or lost."
+    },
+    {
+      "theorem_id": "T1.3A-REBATE-TRUNC-DIV-SOLVENCY",
+      "title": "Treasury Rebate-Farming Immunity Under Canonical trunc_div",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 47.435,
+      "details": "Proven UNSAT across all [1, 2^64-1]^2: maker_ppm + taker_ppm >= 0 implies F_maker + F_taker >= 0 universally."
+    },
+    {
+      "theorem_id": "T1.3B-MUTANT-FLOOR-DIV-EXPLOIT-CAUGHT",
+      "title": "Adversarial Mutation Guard: Naive Floor-Div Rebate Farming Detected",
+      "status": "SAT",
+      "expected_status": "SAT",
+      "verified": true,
+      "elapsed_ms": 27.261,
+      "details": "Exploit witness caught on floor_div mutant: notional_fp=999999, maker_ppm=-1, taker_ppm=1 -> net_treasury=-1 atomic tick!"
+    },
+    {
+      "theorem_id": "T1.4-INDUCTIVE-PARTIAL-FILL-LOCK-SUFFICIENCY",
+      "title": "Inductive Proof (All K >= 1 Fills): Initial Locked Quote Never Underflows Across Arbitrary Partial Fills",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 675.849,
+      "details": "Proven UNSAT via inductive decomposition across [1, 2^64-1]: cost(fill_1..K) + refund == initial_lock with 0 underflow."
+    },
+    {
+      "theorem_id": "T2.1-MARGIN-BOUNDARY-ZERO-BLINDSPOT",
+      "title": "Cross-Margin Strict Positive Liquidation Cushion & Zero Undetected Negative Equity",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 31.535,
+      "details": "Proven UNSAT across 3-leg cross-margin portfolios in [1, 2^64-1]: MM_fp >= 1 on open positions & E < 0 always triggers liquidation."
+    },
+    {
+      "theorem_id": "T2.2-ADL-PROFIT-CAPACITY-SUFFICIENCY",
+      "title": "Clearinghouse Zero-Sum Theorem: Profitable Counterparty uPnL Always Covers 100% of Bankruptcy Deficit",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 34.97,
+      "details": "Proven UNSAT: sum_{profitable}(min(E_j, uPnL_j)) >= total_bankruptcy_deficit holds universally even if Insurance Fund == 0!"
+    },
+    {
+      "theorem_id": "T2.3-WATERFALL-ADL-SOLVENCY-AND-FAIRNESS",
+      "title": "4-Stage Liquidation + Insurance + Quantile-ADL Global Solvency, Principal Protection & Priority Fairness",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 405.617,
+      "details": "Proven UNSAT across 5-account clearinghouse: 0 bad debt, E'_i >= 0, principal C_i untouched on ADL counterparties, Conservation exact, strict quantile order preserved."
+    },
+    {
+      "theorem_id": "T2.4-MUTANT-NO-ADL-INSOLVENCY-CAUGHT",
+      "title": "Adversarial Mutation Guard: Omitting Stage-4 ADL Causes Insurance Fund Insolvency on Gap Shock",
+      "status": "SAT",
+      "expected_status": "SAT",
+      "verified": true,
+      "elapsed_ms": 9.793,
+      "details": "Confirmed SAT witness: without Stage-4 ADL, a jump past P_bk + I_0 leaves unabsorbed negative system equity."
+    },
+    {
+      "theorem_id": "T3.1-EIP712-CROSS-CHAIN-EPOCH-NONCE-IMMUNITY",
+      "title": "EIP-712 (Chain-ID, Vault, Nonce, Epoch) Replay & Cross-Chain Double-Spend Immunity",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 65.665,
+      "details": "Proven UNSAT over 64/160-bit BitVectors: 0 replay, cross-chain, or cross-epoch double-spends possible."
+    },
+    {
+      "theorem_id": "T3.2-CHAIN-REORG-FINALITY-IMMUNITY",
+      "title": "L2 Reorg Rollback & Finality Gate (K=12) Orphan-Deposit & Tx-Reinclusion Immunity",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 14.497,
+      "details": "Proven UNSAT for all reorgs < K_FINALITY (12 blocks): 0 orphaned deposits credited, 0 duplicate canonical payouts, Vault >= Payout + Remaining Claim."
+    },
+    {
+      "theorem_id": "T3.3-ESCAPE-HATCH-WITHDRAWAL-RACE-IMMUNITY",
+      "title": "HyperionVault EIP-712 + CensorshipEscapeHatch Forced-Exit Mutual Solvency Proof",
+      "status": "UNSAT",
+      "expected_status": "UNSAT",
+      "verified": true,
+      "elapsed_ms": 13.084,
+      "details": "Proven UNSAT across all sequence interleavings: EIP-712 withdrawal + Escape-Hatch exit <= single deposit V_dep."
+    },
+    {
+      "theorem_id": "T3.4A-MUTANT-MISSING-CHAIN-ID-CAUGHT",
+      "title": "Adversarial Mutation Guard: Omitting EIP-712 chain_id Enables Cross-Chain Double-Spend",
+      "status": "SAT",
+      "expected_status": "SAT",
+      "verified": true,
+      "elapsed_ms": 7.314,
+      "details": "Confirmed SAT exploit witness: without chain_id in EIP-712 domain, 1 signature drains 2x deposit across chains."
+    },
+    {
+      "theorem_id": "T3.4B-MUTANT-ZERO-FINALITY-REORG-THEFT-CAUGHT",
+      "title": "Adversarial Mutation Guard: Crediting < K_FINALITY Confirmations Enables Reorg Phantom Deposit",
+      "status": "SAT",
+      "expected_status": "SAT",
+      "verified": true,
+      "elapsed_ms": 7.721,
+      "details": "Confirmed SAT exploit witness: 1-confirmation credit creates unbacked off-chain balance on 3-block reorg."
+    }
+  ]
+}

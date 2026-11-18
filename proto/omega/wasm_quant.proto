@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package hyperion.omega.v1;
+
+import "common.proto";
+
+option go_package = "github.com/vanovri/hyperion/proto/omega/gen/go/omegav1;omegav1";
+
+// Deterministic fault & security trap taxonomy raised by Wasmtime Quant Host.
+enum WasmTrapCode {
+  WASM_TRAP_CODE_UNSPECIFIED = 0;
+  WASM_TRAP_CODE_FUEL_EXHAUSTED = 1;
+  WASM_TRAP_CODE_EPOCH_DEADLINE_EXCEEDED = 2;
+  WASM_TRAP_CODE_MEMORY_LIMIT_EXCEEDED = 3;
+  WASM_TRAP_CODE_STACK_OVERFLOW = 4;
+  WASM_TRAP_CODE_OUT_OF_BOUNDS_MEMORY = 5;
+  WASM_TRAP_CODE_INTEGER_DIVIDE_BY_ZERO = 6;
+  WASM_TRAP_CODE_INTEGER_OVERFLOW = 7;
+  WASM_TRAP_CODE_INVALID_CONVERSION_TO_INT = 8;
+  WASM_TRAP_CODE_UNREACHABLE_INSTRUCTION = 9;
+  WASM_TRAP_CODE_INDIRECT_CALL_TYPE_MISMATCH = 10;
+  WASM_TRAP_CODE_FORBIDDEN_HOST_IMPORT = 11;
+  WASM_TRAP_CODE_ORDER_SPAM_LIMIT_EXCEEDED = 12;
+  WASM_TRAP_CODE_PRE_TRADE_RISK_REJECTED = 13;
+}
+
+// Runtime lifecycle state of a co-located WebAssembly quantitative strategy.
+enum StrategyLifecycleState {
+  STRATEGY_LIFECYCLE_STATE_UNSPECIFIED = 0;
+  STRATEGY_LIFECYCLE_STATE_VALIDATING = 1;
+  STRATEGY_LIFECYCLE_STATE_ACTIVE = 2;
+  STRATEGY_LIFECYCLE_STATE_HOT_SWAPPING = 3;
+  STRATEGY_LIFECYCLE_STATE_PAUSED = 4;
+  STRATEGY_LIFECYCLE_STATE_QUARANTINED_ON_TRAP = 5;
+  STRATEGY_LIFECYCLE_STATE_TERMINATED = 6;
+}
+
+// Callback hook invoked when fuel telemetry or a sandbox trap occurred.
+enum WasmCallbackHook {
+  WASM_CALLBACK_HOOK_UNSPECIFIED = 0;
+  WASM_CALLBACK_HOOK_ON_INIT = 1;
+  WASM_CALLBACK_HOOK_ON_BOOK_L2_TICK = 2;
+  WASM_CALLBACK_HOOK_ON_TRADE_TICK = 3;
+  WASM_CALLBACK_HOOK_ON_ORDER_FILL = 4;
+  WASM_CALLBACK_HOOK_ON_STATE_SNAPSHOT_EXPORT = 5;
+  WASM_CALLBACK_HOOK_ON_STATE_SNAPSHOT_IMPORT = 6;
+}
+
+// Pre-trade risk & resource sandbox limits bound to a deployed .wasm strategy instance.
+message StrategySandboxLimits {
+  // Maximum linear memory ceiling in bytes (governance hard cap = 16,777,216 = 16 MiB).
+  uint32 max_linear_memory_bytes = 1;
+  // Maximum call stack bytes (governance hard cap = 524,288 = 512 KiB).
+  uint32 max_stack_bytes = 2;
+  // Per-tick deterministic instruction fuel budget (default = 50,000; max = 200,000).
+  uint64 max_fuel_per_tick = 3;
+  // Hard wall-clock epoch interruption budget in nanoseconds (governance cap = 100,000 ns = 100 us).
+  uint64 max_epoch_walltime_ns = 4;
+  // Maximum host-imported order mutations allowed in a single callback tick (default = 16).
+  uint32 max_orders_per_tick = 5;
+  // Maximum single-order notional in fixed-point (scale 1e8).
+  hyperion.v1.U128 max_order_notional_fp = 6;
+  // Maximum absolute net base inventory allowed for this bot in fixed-point (scale 1e8).
+  uint64 max_abs_position_qty_fp = 7;
+}
+
+// Command to validate, JIT-compile, and deploy (or atomically hot-swap) a .wasm strategy module.
+message DeployStrategyModule {
+  string strategy_id = 1;
+  uint64 account_id = 2;
+  uint32 version = 3;
+  string strategy_name = 4;
+  repeated string subscribed_symbols = 5;
+  // Raw compiled WebAssembly binary (.wasm); validated zero-WASI & NaN-canonicalized by host.
+  bytes wasm_bytecode = 6;
+  // 32-byte Blake3 digest of wasm_bytecode.
+  bytes bytecode_blake3 = 7;
+  // Ed25519 signature of institutional trader over (strategy_id || version || bytecode_blake3).
+  bytes author_ed25519_signature = 8;
+  StrategySandboxLimits limits = 9;
+  // If true, atomically snapshots state from (version - 1) and hands off open orders without gap.
+  bool atomic_hot_swap = 10;
+  bytes initial_config_payload = 11;
+  uint64 submitted_ts_ns = 12;
+  hyperion.v1.TraceMetadata trace = 13;
+}
+
+message DeployStrategyResponse {
+  string strategy_id = 1;
+  uint32 active_version = 2;
+  StrategyLifecycleState state = 3;
+  uint64 jit_compile_latency_us = 4;
+  uint32 handed_off_open_orders = 5;
+  string reject_reason = 6;
+}
+
+// Per-tick or aggregated deterministic CPU fuel & microsecond latency telemetry report.
+message FuelMeteringReport {
+  string strategy_id = 1;
+  uint64 account_id = 2;
+  uint32 version = 3;
+  string symbol = 4;
+  uint64 engine_seq = 5;
+  WasmCallbackHook callback_hook = 6;
+  uint64 fuel_allocated = 7;
+  uint64 fuel_consumed = 8;
+  uint64 fuel_remaining = 9;
+  // Host -> Guest -> Host callback execution latency in nanoseconds.
+  uint64 execution_latency_ns = 10;
+  uint32 linear_memory_pages = 11;
+  uint32 linear_memory_bytes = 12;
+  uint32 orders_emitted_in_tick = 13;
+  uint32 orders_rejected_by_risk_gate = 14;
+  uint64 reported_ts_ns = 15;
+  hyperion.v1.TraceMetadata trace = 16;
+}
+
+// Security & fault isolation event emitted when Wasmtime catches and contains a hostile/faulty guest trap.
+message SandboxExecutionTrap {
+  string trap_event_id = 1;
+  string strategy_id = 2;
+  uint64 account_id = 3;
+  uint32 version = 4;
+  string symbol = 5;
+  uint64 engine_seq = 6;
+  WasmCallbackHook callback_hook = 7;
+  WasmTrapCode trap_code = 8;
+  uint64 fuel_consumed_at_trap = 9;
+  uint64 elapsed_ns_at_trap = 10;
+  uint32 memory_bytes_at_trap = 11;
+  uint32 wasm_program_counter_offset = 12;
+  bool open_orders_auto_canceled = 13;
+  StrategyLifecycleState resulting_state = 14;
+  string diagnostic_message = 15;
+  uint64 trapped_ts_ns = 16;
+  hyperion.v1.TraceMetadata trace = 17;
+}
+
+message PauseOrTerminateStrategyRequest {
+  string strategy_id = 1;
+  uint64 account_id = 2;
+  bool terminate_permanently = 3;
+  bool cancel_open_orders = 4;
+  hyperion.v1.TraceMetadata trace = 5;
+}
+
+message PauseOrTerminateStrategyResponse {
+  string strategy_id = 1;
+  StrategyLifecycleState state = 2;
+  uint32 canceled_orders_count = 3;
+}
+
+message StreamWasmTelemetryRequest {
+  string strategy_id = 1;
+  bool include_fuel_reports = 2;
+  bool include_traps = 3;
+}
+
+message WasmTelemetryEnvelope {
+  uint64 ts_ns = 1;
+  oneof payload {
+    FuelMeteringReport fuel_report = 2;
+    SandboxExecutionTrap trap_alert = 3;
+  }
+}
+
+// Primary gRPC interface exposed by services/quant-wasm-host on port 50164.
+service WasmQuantHostService {
+  rpc DeployStrategy(DeployStrategyModule) returns (DeployStrategyResponse);
+  rpc PauseOrTerminateStrategy(PauseOrTerminateStrategyRequest) returns (PauseOrTerminateStrategyResponse);
+  rpc StreamWasmTelemetry(StreamWasmTelemetryRequest) returns (stream WasmTelemetryEnvelope);
+}

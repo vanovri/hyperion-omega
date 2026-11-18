@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package hyperion.omega.v1;
+
+import "common.proto";
+
+option go_package = "github.com/vanovri/hyperion/proto/omega/gen/go/omegav1;omegav1";
+
+// Elliptic-curve zero-knowledge proving backend used to attest solvency.
+enum ZkProofSystem {
+  ZK_PROOF_SYSTEM_UNSPECIFIED = 0;
+  ZK_PROOF_SYSTEM_GROTH16_BN254 = 1;
+  ZK_PROOF_SYSTEM_PLONK_BN254 = 2;
+  ZK_PROOF_SYSTEM_HALO2_PASTA = 3;
+  ZK_PROOF_SYSTEM_BULLETPROOFS_RISTRETTO = 4;
+}
+
+// Hash function binding each internal Merkle-Sum Sparse Tree (MSST) node.
+enum MsstHashScheme {
+  MSST_HASH_SCHEME_UNSPECIFIED = 0;
+  MSST_HASH_SCHEME_POSEIDON_BN254 = 1;
+  MSST_HASH_SCHEME_POSEIDON_BLS12_381 = 2;
+  MSST_HASH_SCHEME_HYBRID_POSEIDON_BLAKE3 = 3;
+}
+
+// Per-asset reserve vs liability attestation summary in fixed-point (scale 1e8).
+message AssetSolvencySummary {
+  string asset = 1;
+  // Total user liabilities committed at the Merkle-Sum root (scale 1e8, non-negative).
+  hyperion.v1.U128 total_liabilities_fp = 2;
+  // Verified on-chain vault reserves at anchor block height (scale 1e8).
+  hyperion.v1.U128 verified_reserves_fp = 3;
+  // Net solvency surplus = verified_reserves_fp - total_liabilities_fp >= 0 (scale 1e8).
+  hyperion.v1.U128 surplus_equity_fp = 4;
+  // Collateralization ratio in parts-per-million (>= 1_000_000 = >= 100.0000%).
+  uint64 reserve_ratio_ppm = 5;
+}
+
+// Periodic cryptographic announcement of the Merkle-Sum Sparse Tree root commitment.
+message MerkleSumRootAnnouncement {
+  uint64 epoch_id = 1;
+  uint64 snapshot_engine_seq = 2;
+  uint64 snapshot_raft_index = 3;
+  string asset = 4;
+  uint32 tree_height = 5;
+  uint64 active_account_count = 6;
+  MsstHashScheme hash_scheme = 7;
+  // 32-byte Poseidon/Blake3 root hash committing all leaf hashes and sum commitments.
+  bytes root_hash = 8;
+  // Root committed sum of all customer liabilities in atomic fixed-point (scale 1e8).
+  hyperion.v1.U128 root_liability_sum_fp = 9;
+  hyperion.v1.U128 onchain_reserve_sum_fp = 10;
+  uint64 l2_reference_block_number = 11;
+  bytes l2_reference_block_hash = 12;
+  uint64 announced_ts_ns = 13;
+  hyperion.v1.TraceMetadata trace = 14;
+}
+
+// Single sibling step along an authenticated Merkle-Sum Sparse Tree path.
+message MerkleSumSiblingNode {
+  uint32 level = 1;
+  bool sibling_is_left = 2;
+  bytes sibling_hash = 3;
+  // Exact non-negative balance sum carried by the sibling subtree (scale 1e8).
+  hyperion.v1.U128 sibling_sum_fp = 4;
+}
+
+// Individual user cryptographic inclusion & non-negative sum proof verifiable in Wasm/Browser.
+message InclusionSumProof {
+  uint64 epoch_id = 1;
+  uint64 snapshot_engine_seq = 2;
+  string asset = 3;
+  // Blinded leaf identifier H(account_id || user_salt) so sibling users learn zero identity info.
+  bytes blinded_account_leaf_id = 4;
+  // User's exact non-negative balance in 64-bit fixed-point [0, 2^64 - 1] (scale 1e8).
+  uint64 user_balance_fp = 5;
+  bytes leaf_salt_commitment = 6;
+  bytes leaf_hash = 7;
+  repeated MerkleSumSiblingNode siblings = 8;
+  bytes expected_root_hash = 9;
+  hyperion.v1.U128 expected_root_sum_fp = 10;
+  MsstHashScheme hash_scheme = 11;
+  uint64 generated_ts_ns = 12;
+}
+
+// Zero-knowledge succinct receipt proving:
+//   (a) For all leaves i: 0 <= balance_i < 2^64 (no negative phantom accounts),
+//   (b) Every internal binary sum matches left_sum + right_sum without finite-field overflow,
+//   (c) root_liability_sum_fp <= verified_onchain_reserves_fp (100%+ solvency).
+message ZKSolvencyReceipt {
+  string receipt_id = 1;
+  uint64 epoch_id = 2;
+  uint64 snapshot_engine_seq = 3;
+  ZkProofSystem proof_system = 4;
+  MsstHashScheme hash_scheme = 5;
+  MerkleSumRootAnnouncement root_announcement = 6;
+  repeated AssetSolvencySummary asset_summaries = 7;
+  // Serialized succinct elliptic-curve ZK proof bytes (Groth16/Plonk/Halo2).
+  bytes zk_proof_bytes = 8;
+  // Canonical field elements of the public inputs vector serialized in little-endian 32B chunks.
+  repeated bytes public_inputs_le = 9;
+  // 32-byte digest of the circuit verifying key (VK) anchored in SolvencyStateAnchor.sol.
+  bytes verifying_key_digest = 10;
+  uint64 proving_latency_ms = 11;
+  uint32 proof_size_bytes = 12;
+  bool self_verified_ok = 13;
+  uint64 created_ts_ns = 14;
+  hyperion.v1.TraceMetadata trace = 15;
+}
+
+message GenerateEpochSolvencyRequest {
+  uint64 epoch_id = 1;
+  uint64 snapshot_engine_seq = 2;
+  string asset = 3;
+  hyperion.v1.U128 verified_onchain_reserves_fp = 4;
+  uint64 l2_block_number = 5;
+  bytes l2_block_hash = 6;
+  hyperion.v1.TraceMetadata trace = 7;
+}
+
+message GetInclusionSumProofRequest {
+  uint64 epoch_id = 1;
+  uint64 account_id = 2;
+  string asset = 3;
+}
+
+message VerifyZKSolvencyReceiptRequest {
+  ZKSolvencyReceipt receipt = 1;
+}
+
+message VerifyZKSolvencyReceiptResponse {
+  bool valid = 1;
+  uint64 verification_latency_us = 2;
+  string failure_reason = 3;
+}
+
+// Primary gRPC interface exposed by services/zk-solvency-rs on port 50162.
+service ZkSolvencyService {
+  rpc GenerateEpochSolvencyProof(GenerateEpochSolvencyRequest) returns (ZKSolvencyReceipt);
+  rpc GetInclusionSumProof(GetInclusionSumProofRequest) returns (InclusionSumProof);
+  rpc VerifyZKSolvencyReceipt(VerifyZKSolvencyReceiptRequest) returns (VerifyZKSolvencyReceiptResponse);
+}
