@@ -1,0 +1,45 @@
+[package]
+name = "hyperion-zk-solvency"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "HYPERION OMEGA Channel 13: Zero-Knowledge Proof of Reserves & Liabilities (BN254 Groth16 + Sparse-MDS Poseidon/Blake3 MSST + gRPC + Wasm Verifier)"
+
+[lib]
+name = "hyperion_zk_solvency"
+path = "src/lib.rs"
+
+[[bin]]
+name = "zk-solvency-server"
+path = "src/main.rs"
+
+[dependencies]
+hyperion-proto = { path = "../../contracts/gen/rust" }
+hyperion-omega-proto = { path = "../../proto/omega/gen/rust" }
+
+ark-ff = { version = "0.5", features = ["parallel", "std", "asm"] }
+ark-ec = { version = "0.5", features = ["parallel", "std"] }
+ark-bn254 = { version = "0.5", features = ["curve", "scalar_field", "std"] }
+ark-serialize = { version = "0.5", features = ["derive", "std"] }
+ark-std = { version = "0.5", features = ["parallel", "std"] }
+ark-relations = { version = "0.5", features = ["std"] }
+ark-r1cs-std = { version = "0.5", features = ["parallel", "std"] }
+ark-crypto-primitives = { version = "0.5", features = ["sponge", "crh", "r1cs", "parallel", "std"] }
+ark-snark = { version = "0.5" }
+ark-groth16 = { version = "0.5", features = ["parallel", "r1cs", "std"] }
+
+blake3 = { version = "1.5", features = ["rayon"] }
+rayon = "1.10"
+rand = "0.8"
+rand_chacha = "0.3"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4"
+
+prost = "0.13"
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util", "sync", "time"] }
+
+[dev-dependencies]
+hyperion-zk-verifier-wasm = { path = "verifier-wasm" }
