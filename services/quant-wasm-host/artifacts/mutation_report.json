@@ -1,0 +1,162 @@
+{
+  "killed": 22,
+  "total": 22,
+  "mutation_score_pct": 100.0,
+  "total_elapsed_sec": 595.48,
+  "mutants": [
+    {
+      "mutant_id": "M01_ISQRT_RESULT_OFF_BY_ONE",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate Newton-Raphson return `return x;` -> `return x.saturating_add(1);`",
+      "status": "KILLED",
+      "elapsed_sec": 6.586
+    },
+    {
+      "mutant_id": "M02_MUL_FP_SCALE",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate fixed-point product scale `/ FP_SCALE_I128` -> `/ 10_000_000`",
+      "status": "KILLED",
+      "elapsed_sec": 6.449
+    },
+    {
+      "mutant_id": "M03_NOTIONAL_FP_SCALE",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate quote notional divisor `/ FP_SCALE_U128` -> `/ 1_000_000`",
+      "status": "KILLED",
+      "elapsed_sec": 7.183
+    },
+    {
+      "mutant_id": "M04_RATIO_PPM_SIGN",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate ratio_ppm scaling `PPM_SCALE_I128` -> `100_000`",
+      "status": "KILLED",
+      "elapsed_sec": 6.824
+    },
+    {
+      "mutant_id": "M05_ALIGN_ASK_TICK_DIRECTION",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate ask tick rounding upward `saturating_add` -> `saturating_sub`",
+      "status": "KILLED",
+      "elapsed_sec": 7.894
+    },
+    {
+      "mutant_id": "M06_ALIGN_LOT_QTY",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate lot rounding `(qty_fp / lot_size_fp) * lot_size_fp` -> `+ lot_size_fp`",
+      "status": "KILLED",
+      "elapsed_sec": 6.994
+    },
+    {
+      "mutant_id": "M07_EWMA_WEIGHT_COMPLEMENT",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate EWMA complement `PPM_SCALE_I128 - a` -> `PPM_SCALE_I128 + a`",
+      "status": "KILLED",
+      "elapsed_sec": 6.936
+    },
+    {
+      "mutant_id": "M08_ROLLING_WINDOW_EVICTION_SIGN",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate sliding window sum `(value_fp as i128) - (evicted as i128)` -> `+`",
+      "status": "KILLED",
+      "elapsed_sec": 7.007
+    },
+    {
+      "mutant_id": "M09_ZSCORE_DIFF_SIGN",
+      "file": "crates/hyperion-quant-sdk/src/lib.rs",
+      "description": "Mutate Z-score numerator `(sample_fp - mean_fp)` -> `(mean_fp - sample_fp)`",
+      "status": "KILLED",
+      "elapsed_sec": 6.408
+    },
+    {
+      "mutant_id": "M10_CRC32C_POLYNOMIAL",
+      "file": "crates/hyperion-quant-abi/src/lib.rs",
+      "description": "Mutate Castagnoli CRC-32C polynomial `0x82F6_3B78` -> `0xEDB8_8320`",
+      "status": "KILLED",
+      "elapsed_sec": 38.621
+    },
+    {
+      "mutant_id": "M11_ORDER_SPAM_OFF_BY_ONE",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate per-tick spam cap `self.tick_attempts > max_per_tick` -> `>=`",
+      "status": "KILLED",
+      "elapsed_sec": 35.932
+    },
+    {
+      "mutant_id": "M12_ACCOUNT_HALT_LOGIC",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate account/market halt guard `||` -> `&&`",
+      "status": "KILLED",
+      "elapsed_sec": 31.181
+    },
+    {
+      "mutant_id": "M13_TICK_SIZE_DIVISIBILITY",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate tick size alignment `!= 0` -> `== 0`",
+      "status": "KILLED",
+      "elapsed_sec": 36.415
+    },
+    {
+      "mutant_id": "M14_LOT_SIZE_DIVISIBILITY",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate lot size alignment `!= 0` -> `== 0`",
+      "status": "KILLED",
+      "elapsed_sec": 37.161
+    },
+    {
+      "mutant_id": "M15_FAT_FINGER_COLLAR_OFF_BY_ONE",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate fat-finger collar `bps > (self.policy.fat_finger_collar_bps as u128)` -> `>=`",
+      "status": "KILLED",
+      "elapsed_sec": 36.831
+    },
+    {
+      "mutant_id": "M16_POST_ONLY_BUY_CROSS_BOUNDARY",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate POST_ONLY buy crossing `slot.price_fp >= self.ref_best_ask_fp` -> `>`",
+      "status": "KILLED",
+      "elapsed_sec": 40.759
+    },
+    {
+      "mutant_id": "M17_POST_ONLY_SELL_CROSS_BOUNDARY",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate POST_ONLY sell crossing `slot.price_fp <= self.ref_best_bid_fp` -> `<`",
+      "status": "KILLED",
+      "elapsed_sec": 39.794
+    },
+    {
+      "mutant_id": "M18_MAX_ORDER_QTY_OFF_BY_ONE",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate max order qty `slot.qty_fp > self.policy.max_order_qty_fp` -> `>=`",
+      "status": "KILLED",
+      "elapsed_sec": 36.241
+    },
+    {
+      "mutant_id": "M19_POSITION_DELTA_OFF_BY_ONE",
+      "file": "host/src/risk_gate.rs",
+      "description": "Mutate worst-case position cap `>` -> `>=`",
+      "status": "KILLED",
+      "elapsed_sec": 43.404
+    },
+    {
+      "mutant_id": "M20_DUPLICATE_CID_CHECK",
+      "file": "host/src/risk_gate.rs",
+      "description": "Disable duplicate client_order_id check `==` -> `&& false && ==`",
+      "status": "KILLED",
+      "elapsed_sec": 35.431
+    },
+    {
+      "mutant_id": "M21_SHM_REGION_BOUNDS_OFF_BY_ONE",
+      "file": "host/src/shm_ring.rs",
+      "description": "Mutate shared memory region end check `end > mem_bytes.len()` -> `end >= mem_bytes.len()`",
+      "status": "KILLED",
+      "elapsed_sec": 40.549
+    },
+    {
+      "mutant_id": "M22_EGRESS_SLOT_ALIGNMENT",
+      "file": "host/src/shm_ring.rs",
+      "description": "Mutate egress slot alignment check `start % 8 != 0` -> `start % 64 != 0 && false`",
+      "status": "KILLED",
+      "elapsed_sec": 39.982
+    }
+  ]
+}

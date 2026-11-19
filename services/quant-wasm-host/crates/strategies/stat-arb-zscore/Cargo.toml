@@ -1,0 +1,12 @@
+[package]
+name = "stat-arb-zscore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Reference Strategy 1: Rolling Z-Score Spread & OFI Mean-Reversion Quant Bot (.wasm)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hyperion-quant-sdk = { path = "../../hyperion-quant-sdk" }
