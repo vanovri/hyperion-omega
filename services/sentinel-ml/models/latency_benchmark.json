@@ -1,0 +1,41 @@
+{
+  "events_benchmarked": 2000,
+  "alerts_triggered_with_shap_and_proto": 24,
+  "single_event_e2e": {
+    "min_ms": 0.5659,
+    "p50_ms": 0.9029499999999999,
+    "p95_ms": 2.3603199999999993,
+    "p99_ms": 4.158183999999999,
+    "max_ms": 13.649099999999999,
+    "mean_ms": 1.1027869499999996
+  },
+  "alert_full_shap_proto_path": {
+    "min_ms": 2.5749999999999997,
+    "p50_ms": 3.62765,
+    "p95_ms": 4.959834999999999,
+    "p99_ms": 5.342575999999999,
+    "max_ms": 5.4504,
+    "mean_ms": 3.7089208333333334
+  },
+  "microbatch_16_onnx": {
+    "min_ms": 0.5498999999999999,
+    "p50_ms": 0.8486499999999999,
+    "p95_ms": 2.0842149999999964,
+    "p99_ms": 4.473110999999996,
+    "max_ms": 6.1468,
+    "mean_ms": 1.0619868,
+    "per_account_p99_ms": 0.27956943749999974,
+    "throughput_accounts_per_sec": 15066.1
+  },
+  "microbatch_64_onnx": {
+    "min_ms": 1.2009999999999998,
+    "p50_ms": 1.6096499999999998,
+    "p95_ms": 3.4482399999999993,
+    "p99_ms": 5.632395999999997,
+    "max_ms": 6.9868,
+    "mean_ms": 1.8901297999999997,
+    "per_account_p99_ms": 0.08800618749999996,
+    "throughput_accounts_per_sec": 33860.1
+  },
+  "sla_p99_under_10ms_passed": true
+}
