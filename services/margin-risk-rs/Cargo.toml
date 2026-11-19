@@ -1,0 +1,48 @@
+[package]
+name = "margin-risk-rs"
+version = "0.1.0"
+edition = "2021"
+description = "HYPERION OMEGA Channel 14: SIMD SoA Cross-Margin Risk Engine, Arbitrage-Free SVI Vol Surface, Analytical Greeks & Multi-Stage Liquidation Waterfall"
+license = "Apache-2.0"
+
+[lib]
+name = "margin_risk_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "margin-risk-rs"
+path = "src/main.rs"
+
+[dependencies]
+hyperion-proto = { path = "../../contracts/gen/rust" }
+hyperion-omega-proto = { path = "../../proto/omega/gen/rust" }
+axum = { version = "0.7", features = ["json"] }
+blake3 = "1.5"
+parking_lot = "0.12"
+prost = "0.13"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "portfolio_eval"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
