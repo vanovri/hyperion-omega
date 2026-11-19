@@ -1,0 +1,53 @@
+[package]
+name = "ledger-rs"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "HYPERION Channel 02: Zero-Allocation LMAX Disruptor Limit Order Book & Double-Entry Blake3 Merkle Ledger"
+
+[lib]
+name = "ledger_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ledger-rs"
+path = "src/main.rs"
+
+[dependencies]
+hyperion-proto = { path = "../../contracts/gen/rust" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "fs", "io-util", "signal"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tonic = "0.12"
+prost = "0.13"
+prost-types = "0.13"
+blake3 = "1.5"
+crc32c = "0.6"
+memmap2 = "0.9"
+crossbeam-utils = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+tracing-opentelemetry = "0.28"
+thiserror = "2"
+
+[dev-dependencies]
+proptest = "1.5"
+criterion = "0.5"
+tempfile = "3"
+
+[[bench]]
+name = "lob_latency"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
