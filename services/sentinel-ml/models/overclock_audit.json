@@ -1,0 +1,87 @@
+{
+  "mutation_audit": {
+    "overall_killed": 116,
+    "overall_total": 121,
+    "overall_kill_rate_pct": 95.87,
+    "passed_95pct_gate": true,
+    "modules": {
+      "fixed_point.py": {
+        "killed": 68,
+        "total": 68,
+        "kill_rate_pct": 100.0,
+        "survived": []
+      },
+      "graph_engine.py (evict/wash-score/metrics)": {
+        "killed": 48,
+        "total": 53,
+        "kill_rate_pct": 90.57,
+        "survived": [
+          "graph_engine.py:L191: Gt->GtE",
+          "graph_engine.py:L579: LtE->Lt",
+          "graph_engine.py:L673: Gt->GtE",
+          "graph_engine.py:L673: Gt->GtE",
+          "graph_engine.py:L677: Gt->GtE"
+        ]
+      }
+    },
+    "survived": [
+      "graph_engine.py:L191: Gt->GtE",
+      "graph_engine.py:L579: LtE->Lt",
+      "graph_engine.py:L673: Gt->GtE",
+      "graph_engine.py:L673: Gt->GtE",
+      "graph_engine.py:L677: Gt->GtE"
+    ]
+  },
+  "soak_500k": {
+    "warmup_cycles": 4000,
+    "soak_cycles": 500000,
+    "wash_cycles_detected": 20000,
+    "active_edges_before": 33,
+    "active_edges_after": 33,
+    "traced_before_bytes": 183228,
+    "traced_after_bytes": 183288,
+    "traced_peak_bytes": 435888,
+    "net_steady_state_leak_bytes": 60,
+    "elapsed_sec": 227.189,
+    "cycles_per_sec": 2200.8,
+    "ns_per_cycle": 454378.81,
+    "passed_zero_leak": false
+  },
+  "micro_opt_3pass": {
+    "iterations": 10000,
+    "pass1_baseline": {
+      "p50_ns": 215500.0,
+      "p95_ns": 459105.0,
+      "p99_ns": 1330311.0,
+      "mean_ns": 276470.6,
+      "peak_b_per_op": 19236.0,
+      "loop_peak_bytes": 28760.0,
+      "retained_b_1000ops": 10392.0,
+      "result_live_bytes": 1348.0
+    },
+    "pass2_vectorized_zerocopy": {
+      "p50_ns": 65800.0,
+      "p95_ns": 92205.0,
+      "p99_ns": 268005.0,
+      "mean_ns": 75817.2,
+      "peak_b_per_op": 18368.0,
+      "loop_peak_bytes": 28616.0,
+      "retained_b_1000ops": 10440.0,
+      "result_live_bytes": 1224.0
+    },
+    "pass3_aligned64_final": {
+      "p50_ns": 52600.0,
+      "p95_ns": 87705.0,
+      "p99_ns": 390744.0,
+      "mean_ns": 69063.1,
+      "peak_b_per_op": 412.0,
+      "loop_peak_bytes": 476.0,
+      "retained_b_1000ops": 248.0,
+      "result_live_bytes": 216.0
+    },
+    "improvement_p50_pct": 75.59,
+    "improvement_p99_pct": 70.63,
+    "peak_memory_reduction_pct": 97.86
+  },
+  "all_overclock_gates_passed": false
+}

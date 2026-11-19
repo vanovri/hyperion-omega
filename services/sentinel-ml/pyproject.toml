@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperion-sentinel-ml"
+version = "1.0.0"
+description = "HYPERION CH05: Real-Time Temporal Graph & ONNX Market Manipulation Forensics Engine"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.13.0",
+    "scikit-learn>=1.5.0",
+    "torch>=2.4.0",
+    "onnx>=1.16.0",
+    "onnxruntime>=1.19.0",
+    "protobuf>=5.28.0",
+    "grpcio>=1.68.0",
+    "confluent-kafka>=2.6.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "prometheus-client>=0.21.0",
+    "pydantic>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "hypothesis>=6.115.0",
+    "httpx>=0.27.0",
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+sentinel-ml = "sentinel_ml.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "../../contracts/gen/python/src"]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning:fastapi.testclient",
+    "ignore::DeprecationWarning:starlette.testclient",
+]
+
+[tool.ruff]
+line-length = 108
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
