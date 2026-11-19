@@ -1,0 +1,78 @@
+{
+  "total_mutants": 213,
+  "killed_mutants": 205,
+  "survived_mutants_count": 8,
+  "kill_score_pct": 96.24,
+  "per_module": {
+    "fixed_point": {
+      "killed": 28,
+      "total": 28,
+      "kill_score_pct": 100.0
+    },
+    "gp_alpha.operators": {
+      "killed": 94,
+      "total": 95,
+      "kill_score_pct": 98.95
+    },
+    "validation.statistics": {
+      "killed": 70,
+      "total": 77,
+      "kill_score_pct": 90.91
+    },
+    "ppo_agent.trainer": {
+      "killed": 13,
+      "total": 13,
+      "kill_score_pct": 100.0
+    }
+  },
+  "survived_details": [
+    {
+      "module": "gp_alpha.operators",
+      "function": "ts_rank",
+      "line": 166,
+      "mutation": "Sub -> Add"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_probabilistic_sharpe_ratio",
+      "line": 123,
+      "mutation": "Mult -> Div"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_probabilistic_sharpe_ratio",
+      "line": 129,
+      "mutation": "Add -> Sub"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_deflated_sharpe_ratio",
+      "line": 164,
+      "mutation": "Gt -> LtE"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_deflated_sharpe_ratio",
+      "line": 166,
+      "mutation": "GtE -> Lt"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_deflated_sharpe_ratio",
+      "line": 166,
+      "mutation": "Sub -> Add"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_cscv_pbo",
+      "line": 267,
+      "mutation": "Add -> Sub"
+    },
+    {
+      "module": "validation.statistics",
+      "function": "compute_cscv_pbo",
+      "line": 289,
+      "mutation": "LtE -> Gt"
+    }
+  ]
+}

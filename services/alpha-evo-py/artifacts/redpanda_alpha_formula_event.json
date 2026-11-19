@@ -1,0 +1,143 @@
+{
+  "topic": "hyperion.omega.alpha.formulas.v1",
+  "key": "gen:11",
+  "headers": {
+    "x-source-service": "alpha-evo-py",
+    "x-schema-type": "hyperion.omega.alpha_ast.v1"
+  },
+  "payload": {
+    "schema_version": "hyperion.omega.alpha_ast.v1",
+    "target_channel": "ch15-quant-wasm",
+    "symbol": "BTC-USDT",
+    "formula_id": "alpha_gp_58cb0322e6e060eb",
+    "sexpr": "neg(signed_sqrt(sub(neg(mid_ret), microprice_skew(bid_px, bid_sz, ask_px, ask_sz))))",
+    "latex": "-(\\text{sgn}(\\left(-(\\text{mid\\_ret}) - \\text{MicroSkew}_t\\right))\\sqrt{|\\left(-(\\text{mid\\_ret}) - \\text{MicroSkew}_t\\right)|})",
+    "complexity": {
+      "node_count": 6,
+      "tree_depth": 5,
+      "max_lookback_bars": 1,
+      "ssa_register_count": 6
+    },
+    "ast_tree": {
+      "kind": "unary_op",
+      "op": "neg",
+      "window": 0,
+      "value": 0.0,
+      "children": [
+        {
+          "kind": "unary_op",
+          "op": "signed_sqrt",
+          "window": 0,
+          "value": 0.0,
+          "children": [
+            {
+              "kind": "binary_op",
+              "op": "sub",
+              "window": 0,
+              "value": 0.0,
+              "children": [
+                {
+                  "kind": "unary_op",
+                  "op": "neg",
+                  "window": 0,
+                  "value": 0.0,
+                  "children": [
+                    {
+                      "kind": "feature",
+                      "op": "mid_ret",
+                      "window": 0,
+                      "value": 0.0,
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "kind": "microprice_skew",
+                  "op": "microprice_skew",
+                  "window": 0,
+                  "value": 0.0,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "ssa_bytecode": {
+      "output_register": 5,
+      "instructions": [
+        {
+          "reg": 0,
+          "kind": "feature",
+          "op": "mid_ret",
+          "src_regs": [],
+          "window": 0,
+          "const_val": 0.0
+        },
+        {
+          "reg": 1,
+          "kind": "unary_op",
+          "op": "neg",
+          "src_regs": [
+            0
+          ],
+          "window": 0,
+          "const_val": 0.0
+        },
+        {
+          "reg": 2,
+          "kind": "microprice_skew",
+          "op": "microprice_skew",
+          "src_regs": [],
+          "window": 0,
+          "const_val": 0.0
+        },
+        {
+          "reg": 3,
+          "kind": "binary_op",
+          "op": "sub",
+          "src_regs": [
+            1,
+            2
+          ],
+          "window": 0,
+          "const_val": 0.0
+        },
+        {
+          "reg": 4,
+          "kind": "unary_op",
+          "op": "signed_sqrt",
+          "src_regs": [
+            3
+          ],
+          "window": 0,
+          "const_val": 0.0
+        },
+        {
+          "reg": 5,
+          "kind": "unary_op",
+          "op": "neg",
+          "src_regs": [
+            4
+          ],
+          "window": 0,
+          "const_val": 0.0
+        }
+      ]
+    },
+    "validation_metrics": {
+      "oos_sharpe_annualized": 299.7224,
+      "deflated_sharpe_ratio_null_evt": 0.991831,
+      "deflated_sharpe_ratio_empirical_disp": 0.000374,
+      "deflated_sharpe_ratio": 0.991831,
+      "probabilistic_sharpe_ratio": 1.0,
+      "sr0_hurdle_null_evt_annualized": 162.6248,
+      "sr0_hurdle_empirical_disp_annualized": 492.2025,
+      "raw_gp_trials": 403,
+      "effective_independent_trials": 252.2134,
+      "pbo_cscv_252": 0.039683,
+      "passed_institutional_gate": true
+    }
+  }
+}

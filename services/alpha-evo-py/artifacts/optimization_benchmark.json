@@ -1,0 +1,50 @@
+{
+  "three_pass_benchmark": {
+    "n_ticks_per_batch": 4096,
+    "formula_sexpr": "neg(signed_sqrt(sub(neg(mid_ret), microprice_skew(bid_px, bid_sz, ask_px, ask_sz))))",
+    "cache_line_alignment_bytes": 64,
+    "register_base_addr_mod_64": 0,
+    "max_numerical_parity_error": 0.0,
+    "pass_1_baseline_python_loop": {
+      "p50_ns_per_tick": 8114.55,
+      "p99_ns_per_tick": 9781.71,
+      "mean_total_us": 33728.4,
+      "peak_temp_bytes": 396084,
+      "bytes_per_tick": 96.7,
+      "retained_bytes_after_op": 3828,
+      "retained_blocks_after_op": 118
+    },
+    "pass_2_vectorized_numpy": {
+      "p50_ns_per_tick": 178.74,
+      "p99_ns_per_tick": 320.5,
+      "mean_total_us": 790.19,
+      "peak_temp_bytes": 335040,
+      "bytes_per_tick": 81.797,
+      "retained_bytes_after_op": 2544,
+      "retained_blocks_after_op": 31
+    },
+    "pass_3_cache_aligned_ssa_zero_alloc": {
+      "p50_ns_per_tick": 161.23,
+      "p99_ns_per_tick": 682.83,
+      "mean_total_us": 800.54,
+      "peak_temp_bytes": 269392,
+      "bytes_per_tick": 65.77,
+      "retained_bytes_after_op": 2512,
+      "retained_blocks_after_op": 31
+    },
+    "speedup_pass2_vs_pass1_x": 45.4,
+    "speedup_pass3_vs_pass1_x": 50.33,
+    "speedup_pass3_vs_pass2_x": 1.11,
+    "peak_memory_reduction_pass3_vs_pass1_pct": 31.99
+  },
+  "soak_test_500k": {
+    "executed_cycles": 500000,
+    "elapsed_sec": 2.2691,
+    "throughput_cycles_per_sec": 220347.3,
+    "traced_bytes_after_warmup": 0,
+    "traced_bytes_after_500k_soak": 0,
+    "peak_traced_bytes": 288,
+    "steady_state_leak_bytes": 0,
+    "zero_leak_verified": true
+  }
+}

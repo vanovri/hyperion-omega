@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperion-alpha-evo"
+version = "1.0.0"
+description = "Channel 19: Autonomous Quantitative AI Research Lab — Vectorized LOB Gym, Symbolic GP Alpha Factory, Multi-Agent PPO Optimal Execution, and Institutional Anti-Overfitting Validation (DSR & PBO)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.13.0",
+    "torch>=2.2.0",
+    "onnx>=1.16.0",
+    "onnxruntime>=1.18.0",
+    "gymnasium>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+alpha-evo-run = "alpha_evo.pipeline:main"
+alpha-evo-serve = "alpha_evo.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --strict-markers"
