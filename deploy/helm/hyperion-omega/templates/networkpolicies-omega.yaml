@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hyperion-omega-default-deny
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-raft-quorum-and-ledger
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: consensus-raft-rs
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: consensus-raft-rs
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ledger-rs
+      ports:
+        - protocol: TCP
+          port: 50161
+        - protocol: TCP
+          port: 50201
+        - protocol: TCP
+          port: 8091

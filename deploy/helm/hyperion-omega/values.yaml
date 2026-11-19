@@ -1,0 +1,66 @@
+# Default RAM-friendly `core` profile values (override with -f values.omega.yaml for full 20-channel cluster)
+global:
+  profile: "core"
+  namespace: hyperion-omega
+  imageRegistry: "ghcr.io/vanovri/hyperion"
+  imageTag: "2.0.0-omega"
+  fpScale: "100000000"
+
+core:
+  enabled: true
+  ledgerRs:
+    replicas: 1
+    grpcPort: 50151
+    httpPort: 8082
+    memoryLimit: "512Mi"
+  gatewayGo:
+    replicas: 2
+    minReplicas: 2
+    maxReplicas: 8
+    httpWsPort: 8080
+    adminPort: 8081
+    memoryLimit: "384Mi"
+  sovereignStudio:
+    enabled: true
+    replicas: 2
+    httpPort: 3001
+    memoryLimit: "512Mi"
+
+omegaExpansion:
+  enabled: false
+  consensusRaft:
+    replicas: 5
+    grpcPort: 50161
+    httpPort: 8091
+    storageSize: "20Gi"
+  zkSolvency:
+    replicas: 2
+    grpcPort: 50162
+    httpPort: 8092
+  marginRisk:
+    replicas: 2
+    grpcPort: 50163
+    httpPort: 8093
+  quantWasmHost:
+    replicas: 2
+    grpcPort: 50164
+    httpPort: 8094
+    maxLinearMemoryBytes: 16777216
+    maxFuelPerTick: 50000
+  ebpfNetguard:
+    enabled: true
+    grpcPort: 50165
+    httpPort: 8095
+  lakehouseOlap:
+    replicas: 2
+    grpcPort: 50166
+    httpPort: 8096
+  chainRelayer:
+    replicas: 2
+    grpcPort: 50167
+    httpPort: 8097
+    minFinalityBlocks: 12
+  alphaEvo:
+    replicas: 1
+    grpcPort: 50168
+    httpPort: 8098

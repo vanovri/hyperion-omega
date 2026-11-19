@@ -1,0 +1,113 @@
+name: Hyperion Omega 20-Channel Verification & Singularity CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Execution profile (core or full-omega)"
+        required: false
+        default: "full-omega"
+        type: choice
+        options:
+          - core
+          - full-omega
+
+jobs:
+  contracts-and-formal-proofs:
+    name: "CH01 & CH11 · Protobuf Lint + Z3 SMT + TLA+/BFS"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate Core & Omega Contracts
+        run: |
+          python scripts/validate_contracts.py
+      - name: Run Z3 SMT Formal Proofs & Explicit-State Model Checker
+        if: ${{ github.event.inputs.profile != 'core' }}
+        run: |
+          pip install z3-solver pytest
+          pytest specs/formal-verification/smt/ -v
+          cargo test --manifest-path specs/formal-verification/model-checker-rs/Cargo.toml --release
+
+  rust-omega-matrix:
+    name: "Rust Matrix (${{ matrix.crate }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - contracts/gen/rust
+          - services/ledger-rs
+          - services/stream-aggregator
+          - services/chronos-replay
+          - services/consensus-raft-rs
+          - services/zk-solvency-rs
+          - services/margin-risk-rs
+          - services/quant-wasm-host
+          - services/ebpf-netguard
+          - services/lakehouse-olap-rs
+          - e2e-omega/singularity-harness-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Clippy & Release Test Suite
+        run: |
+          if [ -f "${{ matrix.crate }}/Cargo.toml" ]; then
+            cargo clippy --manifest-path "${{ matrix.crate }}/Cargo.toml" --all-targets -- -D warnings
+            cargo test --manifest-path "${{ matrix.crate }}/Cargo.toml" --release
+          fi
+
+  go-race-matrix:
+    name: "Go Race Detector (${{ matrix.module }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module:
+          - contracts/gen/go
+          - services/gateway-go
+          - services/chaos-sim
+          - services/chain-relayer-go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: Go Vet & Race Detector
+        run: |
+          if [ -f "${{ matrix.module }}/go.mod" ]; then
+            go vet -C "${{ matrix.module }}" ./...
+            go test -C "${{ matrix.module }}" -race -v ./...
+          fi
+
+  sovereign-studio-and-singularity:
+    name: "CH20 · Sovereign Studio + Mutation Gate + Black Swan Singularity"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Sovereign Studio Typecheck, Vitest & Next.js Production Build
+        working-directory: apps/sovereign-studio
+        run: |
+          npm install --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Execute Mutation Testing Audit (>= 95% Kill Gate) & Black Swan Singularity Crucible
+        run: |
+          python e2e-omega/mutation_audit_runner.py
+          python e2e-omega/run_omega_singularity.py --profile full-omega

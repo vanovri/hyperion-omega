@@ -1,0 +1,379 @@
+name: hyperion-omega
+
+# =============================================================================
+# HYPERION OMEGA — MODULAR 20-CHANNEL DOCKER COMPOSE ORCHESTRATION (CH20)
+# =============================================================================
+# Profiles:
+#   1) RAM-Friendly Core Profile (~3.5 GB RAM):
+#      docker compose -f docker-compose.omega.yml --profile core up -d --build
+#   2) Full 20-Channel Omega Singularity Stack (~10-14 GB RAM):
+#      docker compose -f docker-compose.omega.yml --profile full-omega up -d --build
+# =============================================================================
+
+x-common-env: &common-env
+  HYPERION_FP_SCALE: "100000000"
+  REDPANDA_BROKERS: "redpanda:9092"
+  DATABASE_URL: "postgres://hyperion:hyperion_dev_secret@timescaledb:5432/hyperion?sslmode=disable"
+  REDIS_URL: "redis://redis:6379/0"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+
+services:
+  # ---------------------------------------------------------------------------
+  # INFRASTRUCTURE LAYER (Active in both `core` and `full-omega`)
+  # ---------------------------------------------------------------------------
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.8
+    container_name: hyperion-omega-redpanda
+    profiles: ["core", "full-omega"]
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=768M
+      - --overprovisioned
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+      - "19644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: hyperion-omega-timescaledb
+    profiles: ["core", "full-omega"]
+    environment:
+      POSTGRES_USER: hyperion
+      POSTGRES_PASSWORD: hyperion_dev_secret
+      POSTGRES_DB: hyperion
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./deploy/sql:/docker-entrypoint-initdb.d:ro
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hyperion -d hyperion"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: hyperion-omega-redis
+    profiles: ["core", "full-omega"]
+    command: ["redis-server", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: hyperion-omega-otel
+    profiles: ["core", "full-omega"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./deploy/otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: hyperion-omega-prometheus
+    profiles: ["core", "full-omega"]
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  # ---------------------------------------------------------------------------
+  # PHASE I CORE SERVICES (CH02 - CH09, Active in `core` & `full-omega`)
+  # ---------------------------------------------------------------------------
+  ledger-rs:
+    build:
+      context: .
+      dockerfile: services/ledger-rs/Dockerfile
+    container_name: hyperion-ledger-rs
+    profiles: ["core", "full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50151"
+      HTTP_PORT: "8082"
+    ports:
+      - "50151:50151"
+      - "8082:8082"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  gateway-go:
+    build:
+      context: .
+      dockerfile: services/gateway-go/Dockerfile
+    container_name: hyperion-gateway-go
+    profiles: ["core", "full-omega"]
+    environment:
+      <<: *common-env
+      LEDGER_GRPC_ADDR: "ledger-rs:50151"
+      HTTP_WS_PORT: "8080"
+      ADMIN_PORT: "8081"
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      - ledger-rs
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  stream-aggregator:
+    build:
+      context: .
+      dockerfile: services/stream-aggregator/Dockerfile
+    container_name: hyperion-stream-aggregator
+    profiles: ["core", "full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50152"
+      HTTP_PORT: "8083"
+    ports:
+      - "50152:50152"
+      - "8083:8083"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  sentinel-ml:
+    build:
+      context: .
+      dockerfile: services/sentinel-ml/Dockerfile
+    container_name: hyperion-sentinel-ml
+    profiles: ["core", "full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50153"
+      HTTP_PORT: "8084"
+    ports:
+      - "50153:50153"
+      - "8084:8084"
+
+  aegis-agent:
+    build:
+      context: .
+      dockerfile: services/aegis-agent/Dockerfile
+    container_name: hyperion-aegis-agent
+    profiles: ["core", "full-omega"]
+    environment:
+      <<: *common-env
+      HTTP_PORT: "8085"
+      AEGIS_DETERMINISTIC_FALLBACK: "1"
+    ports:
+      - "8085:8085"
+
+  chaos-sim:
+    build:
+      context: .
+      dockerfile: services/chaos-sim/Dockerfile
+    container_name: hyperion-chaos-sim
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GATEWAY_HTTP_URL: "http://gateway-go:8080"
+      HTTP_PORT: "8086"
+    ports:
+      - "8086:8086"
+
+  chronos-replay:
+    build:
+      context: .
+      dockerfile: services/chronos-replay/Dockerfile
+    container_name: hyperion-chronos-replay
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50154"
+      HTTP_PORT: "8088"
+    ports:
+      - "50154:50154"
+      - "8088:8088"
+
+  terminal-web:
+    build:
+      context: .
+      dockerfile: apps/terminal-web/Dockerfile
+    container_name: hyperion-terminal-web
+    profiles: ["core", "full-omega"]
+    environment:
+      NEXT_PUBLIC_GATEWAY_WS_URL: "ws://localhost:8080/ws"
+    ports:
+      - "3000:3000"
+
+  # ---------------------------------------------------------------------------
+  # PHASE II OMEGA EXPANSION SERVICES (CH12 - CH20, Active in `full-omega`)
+  # ---------------------------------------------------------------------------
+  consensus-raft-rs:
+    build:
+      context: .
+      dockerfile: services/consensus-raft-rs/Dockerfile
+    container_name: hyperion-consensus-raft-rs
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50161"
+      HTTP_PORT: "8091"
+      RAFT_CLUSTER_NODES: "1,2,3,4,5"
+    ports:
+      - "50161:50161"
+      - "8091:8091"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  zk-solvency-rs:
+    build:
+      context: .
+      dockerfile: services/zk-solvency-rs/Dockerfile
+    container_name: hyperion-zk-solvency-rs
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50162"
+      HTTP_PORT: "8092"
+    ports:
+      - "50162:50162"
+      - "8092:8092"
+
+  margin-risk-rs:
+    build:
+      context: .
+      dockerfile: services/margin-risk-rs/Dockerfile
+    container_name: hyperion-margin-risk-rs
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50163"
+      HTTP_PORT: "8093"
+    ports:
+      - "50163:50163"
+      - "8093:8093"
+
+  quant-wasm-host:
+    build:
+      context: .
+      dockerfile: services/quant-wasm-host/Dockerfile
+    container_name: hyperion-quant-wasm-host
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50164"
+      HTTP_PORT: "8094"
+      WASM_MAX_LINEAR_MEMORY_BYTES: "16777216"
+      WASM_MAX_FUEL_PER_TICK: "50000"
+    ports:
+      - "50164:50164"
+      - "8094:8094"
+
+  ebpf-netguard:
+    build:
+      context: .
+      dockerfile: services/ebpf-netguard/Dockerfile
+    container_name: hyperion-ebpf-netguard
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50165"
+      HTTP_PORT: "8095"
+      NETGUARD_USERSPACE_VM_FALLBACK: "1"
+    ports:
+      - "50165:50165"
+      - "8095:8095"
+
+  lakehouse-olap-rs:
+    build:
+      context: .
+      dockerfile: services/lakehouse-olap-rs/Dockerfile
+    container_name: hyperion-lakehouse-olap-rs
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50166"
+      HTTP_PORT: "8096"
+    ports:
+      - "50166:50166"
+      - "8096:8096"
+
+  anvil-l2-devnet:
+    image: ghcr.io/foundry-rs/foundry:latest
+    container_name: hyperion-anvil-l2
+    profiles: ["full-omega"]
+    entrypoint: ["anvil", "--host", "0.0.0.0", "--port", "8545", "--chain-id", "31337", "--block-time", "1"]
+    ports:
+      - "8545:8545"
+
+  chain-relayer-go:
+    build:
+      context: .
+      dockerfile: services/chain-relayer-go/Dockerfile
+    container_name: hyperion-chain-relayer-go
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      EVM_RPC_URL: "http://anvil-l2-devnet:8545"
+      GRPC_PORT: "50167"
+      HTTP_PORT: "8097"
+      MIN_FINALITY_BLOCKS: "12"
+    ports:
+      - "50167:50167"
+      - "8097:8097"
+    depends_on:
+      - anvil-l2-devnet
+
+  alpha-evo-py:
+    build:
+      context: .
+      dockerfile: services/alpha-evo-py/Dockerfile
+    container_name: hyperion-alpha-evo-py
+    profiles: ["full-omega"]
+    environment:
+      <<: *common-env
+      GRPC_PORT: "50168"
+      HTTP_PORT: "8098"
+    ports:
+      - "50168:50168"
+      - "8098:8098"
+
+  sovereign-studio:
+    build:
+      context: apps/sovereign-studio
+      dockerfile: Dockerfile
+    container_name: hyperion-sovereign-studio
+    profiles: ["core", "full-omega"]
+    environment:
+      NEXT_PUBLIC_HYPERION_WS_URL: "ws://localhost:8080/ws"
+      NEXT_PUBLIC_OLAP_HTTP_URL: "http://localhost:8096"
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    deploy:
+      resources:
+        limits:
+          memory: 512M

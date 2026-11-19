@@ -1,0 +1,11 @@
+[package]
+name = "hyperion-omega-singularity-crucible"
+version = "2.0.0"
+edition = "2021"
+description = "HYPERION OMEGA Channel 20 — Zero-Dependency Pure-Safe-Rust 20-Channel Black Swan Singularity Crucible, 500k Soak & Mutation Target"
+
+[dependencies]
+
+[[bin]]
+name = "omega-crucible"
+path = "src/main.rs"

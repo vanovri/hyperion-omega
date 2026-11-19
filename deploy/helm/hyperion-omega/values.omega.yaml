@@ -1,0 +1,6 @@
+# Full 20-Channel Omega Singularity Production Profile
+global:
+  profile: "full-omega"
+
+omegaExpansion:
+  enabled: true

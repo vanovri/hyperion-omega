@@ -1,0 +1,13 @@
+apiVersion: v2
+name: hyperion-omega
+description: HYPERION OMEGA 20-Channel Distributed Deterministic Exchange, ZK-Solvency, Wasm Quant & Sovereign Workstation Helm Chart
+type: application
+version: 2.0.0
+appVersion: "2.0.0-omega"
+keywords:
+  - exchange
+  - raft
+  - zero-knowledge
+  - webassembly
+  - ebpf
+  - datafusion

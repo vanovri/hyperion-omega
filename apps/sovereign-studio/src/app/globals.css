@@ -1,0 +1,316 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --sovereign-void: #06090f;
+  --sovereign-obsidian: #0b101b;
+  --sovereign-slate: #101726;
+  --sovereign-elevated: #162033;
+  --sovereign-inset: #05070c;
+
+  --border-subtle: rgba(148, 163, 184, 0.1);
+  --border-strong: rgba(148, 163, 184, 0.22);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-crimson: #f43f5e;
+}
+
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  inline-size: 100%;
+  min-block-size: 100dvh;
+  background-color: var(--sovereign-void);
+  color: var(--text-primary);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fix inline baseline gap on replaced media at the source (css-layout §1.2) */
+canvas,
+svg {
+  display: block;
+}
+
+.mono-num {
+  font-family: "JetBrains Mono", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accessible Visually Hidden Utility with :focus-within/:active opt-out for skip links */
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.skip-link:focus-visible {
+  position: fixed;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  background: var(--sovereign-elevated);
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* High-contrast keyboard focus ring >= 3:1 (accessibility §5) */
+:where(a:any-link, button, input, select, textarea, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+/* Interactive target size >= 24x24 CSS px (accessibility §5) */
+.sovereign-btn {
+  display: inline-flex;
+  align-items: safe center;
+  justify-content: center;
+  gap: 6px;
+  min-block-size: 28px;
+  min-inline-size: 28px;
+  padding-block: 4px;
+  padding-inline: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--sovereign-slate);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.sovereign-btn:hover {
+  background: var(--sovereign-elevated);
+  border-color: rgba(34, 211, 238, 0.45);
+}
+
+.sovereign-btn-danger {
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.12);
+  color: #fecdd3;
+}
+
+.sovereign-btn-danger:hover {
+  background: rgba(244, 63, 94, 0.22);
+  border-color: var(--accent-crimson);
+}
+
+.sovereign-input {
+  background: var(--sovereign-inset);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  min-block-size: 28px;
+}
+
+/* Scroll-driven edge-fade tablist + Forced-Colors-safe [aria-selected="true"]::after underline (tabs guide) */
+.tab-scroller {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+  scroll-padding-inline: 2.5rem;
+  --fade-size: 2.5rem;
+  --fade-dir: right;
+  --fade-start-pos: 0;
+  --fade-end-pos: 100%;
+  mask:
+    linear-gradient(black, black) no-clip subtract,
+    linear-gradient(to var(--fade-dir), black, transparent) var(--fade-start-pos) 0 / var(--fade-start) 100% no-repeat no-clip,
+    linear-gradient(to var(--fade-dir), transparent, black) var(--fade-end-pos) 0 / var(--fade-end) 100% no-repeat no-clip;
+  animation: reveal-fade-start linear both, hide-fade-end linear both;
+  animation-timeline: scroll(self inline);
+  animation-range: 0 var(--fade-size), calc(100% - var(--fade-size)) 100%;
+}
+
+.tab-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes reveal-fade-start {
+  to {
+    --fade-start: var(--fade-size);
+  }
+}
+
+@keyframes hide-fade-end {
+  from {
+    --fade-end: var(--fade-size);
+  }
+}
+
+.sovereign-tab {
+  position: relative;
+  flex: none;
+  scroll-snap-align: start;
+  min-block-size: 32px;
+  padding-inline: 12px;
+  padding-block: 6px;
+  background: transparent;
+  border: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sovereign-tab:hover {
+  color: var(--text-primary);
+}
+
+.sovereign-tab[aria-selected="true"] {
+  color: var(--accent-cyan);
+}
+
+.sovereign-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  border-block-end: 2px solid var(--accent-cyan);
+}
+
+/* Scrollable regions with stable scrollbar gutter & contained overscroll (css-layout §6) */
+.scroll-region {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+/* Container-Query Responsive Data Table with Sticky Headers (responsive-table guide) */
+.table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: 280px;
+  container-type: inline-size;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--sovereign-inset);
+}
+
+.sovereign-table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 11.5px;
+}
+
+.sovereign-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--sovereign-slate);
+}
+
+.sovereign-table th,
+.sovereign-table td {
+  padding: 6px 10px;
+  text-align: start;
+  border-block-end: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.sovereign-table thead th {
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+}
+
+.sovereign-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--sovereign-obsidian);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@container (width < 520px) {
+  .sovereign-table,
+  .sovereign-table thead,
+  .sovereign-table tbody,
+  .sovereign-table tr,
+  .sovereign-table th,
+  .sovereign-table td {
+    display: block;
+  }
+
+  .sovereign-table thead {
+    display: none;
+  }
+
+  .sovereign-table tr {
+    margin-block-end: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .sovereign-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: var(--sovereign-slate);
+  }
+
+  .sovereign-table td[data-col-label]::before {
+    content: attr(data-col-label) ": ";
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+}
+
+.panel-card {
+  background: var(--sovereign-obsidian);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-inline-size: 0;
+}

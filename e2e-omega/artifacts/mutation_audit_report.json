@@ -1,0 +1,195 @@
+{
+  "suite": "HYPERION_OMEGA_CH20_DIRECTED_MUTATION_AUDIT",
+  "technique": "Untch-Offutt-Harrold Mutant Schemata (1x rustc + 26 isolated runs)",
+  "total_mutants": 26,
+  "killed_mutants": 26,
+  "survived_mutants": 0,
+  "mutation_kill_score_pct": 100.0,
+  "threshold_pct": 95.0,
+  "gate_passed": true,
+  "total_elapsed_sec": 123.07,
+  "mutants": [
+    {
+      "id": "M01_FP_NOTIONAL_SCALE_SHIFT",
+      "subsystem": "CH01/CH02 Fixed-Point Notional",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 243.0
+    },
+    {
+      "id": "M02_FEE_TRUNC_ARITHMETIC",
+      "subsystem": "CH01/CH02 Signed Fee/Rebate",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 230.3
+    },
+    {
+      "id": "M03_BYPASS_SELF_TRADE_PREVENTION",
+      "subsystem": "CH02 LOB Self-Trade Prevention",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 331.7
+    },
+    {
+      "id": "M04_WEAKEN_FROZEN_ACCOUNT_GATE",
+      "subsystem": "CH02/CH06 Aegis Account Freeze",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 417.9
+    },
+    {
+      "id": "M05_TAKER_SOLVENCY_BOUNDARY",
+      "subsystem": "CH02 Pre-Trade Balance Check",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 425.4
+    },
+    {
+      "id": "M06_INVERT_MAKER_REBATE_SIGN",
+      "subsystem": "CH02 Maker Rebate Settlement",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 369.8
+    },
+    {
+      "id": "M07_DROP_MAKER_FEE_FROM_TREASURY",
+      "subsystem": "CH02 Double-Entry Treasury Pool",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 381.1
+    },
+    {
+      "id": "M08_RELAX_DOUBLE_ENTRY_EQUALITY",
+      "subsystem": "CH02/CH11 Conservation Invariant",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 448.7
+    },
+    {
+      "id": "M09_IGNORE_WAL_CRC32C_BITROT",
+      "subsystem": "CH02/CH08 HYPWAL01 CRC32C Check",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 487.3
+    },
+    {
+      "id": "M10_IGNORE_WAL_SEQ_GAP",
+      "subsystem": "CH02/CH08 WAL Monotonic Sequence",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 610.2
+    },
+    {
+      "id": "M11_MINORITY_RAFT_QUORUM_SPLITBRAIN",
+      "subsystem": "CH12 5-Node Raft Quorum Formula",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 568.8
+    },
+    {
+      "id": "M12_BYPASS_RAFT_PREVOTE_SHIELD",
+      "subsystem": "CH12 Raft PreVote Protocol",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 499.3
+    },
+    {
+      "id": "M13_RAFT_VOTE_STALE_LOG_CANDIDATE",
+      "subsystem": "CH12 Raft Log Completeness",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 429.2
+    },
+    {
+      "id": "M14_RAFT_STALE_TERM_NOT_INCREMENTED",
+      "subsystem": "CH12 Raft Election Term Monotonicity",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 411.4
+    },
+    {
+      "id": "M15_CROSS_MARGIN_BLINDSPOT",
+      "subsystem": "CH14 Maintenance Margin Gate",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 407.3
+    },
+    {
+      "id": "M16_INSURANCE_FUND_SIGN_FLIP",
+      "subsystem": "CH14 Stage-3 Insurance Absorption",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 383.8
+    },
+    {
+      "id": "M17_OMIT_STAGE4_QUANTILE_ADL",
+      "subsystem": "CH14 Stage-4 Quantile ADL",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 646.3
+    },
+    {
+      "id": "M18_BYPASS_EBPF_CIDR_BLOCKLIST",
+      "subsystem": "CH16 eBPF XDP LPM Blocklist",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 794.1
+    },
+    {
+      "id": "M19_EBPF_OFF_BY_ONE_RATE_LIMIT",
+      "subsystem": "CH16 eBPF Token-Bucket Limiter",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 452.6
+    },
+    {
+      "id": "M20_EBPF_ACCEPT_BAD_WIRE_MAGIC",
+      "subsystem": "CH16 0x4859 Wire Magic Guard",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 406.4
+    },
+    {
+      "id": "M21_DISABLE_WASH_RING_DETECTOR",
+      "subsystem": "CH05 Temporal Multigraph Cycle",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 401.4
+    },
+    {
+      "id": "M22_BYPASS_WASM_FUEL_METERING",
+      "subsystem": "CH15 Wasmtime Fuel Exhaustion Trap",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 7181.7
+    },
+    {
+      "id": "M23_BYPASS_WASM_16MB_MEMORY_CAP",
+      "subsystem": "CH15 Wasmtime 16MiB Linear Cap",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 5560.2
+    },
+    {
+      "id": "M24_ALLOW_NEGATIVE_GHOST_LEAF_MSST",
+      "subsystem": "CH13 ZK Merkle-Sum Range Proof",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 4329.6
+    },
+    {
+      "id": "M25_ALLOW_INSOLVENT_VAULT_RESERVES",
+      "subsystem": "CH13/CH18 Solvency Inequality",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 5028.4
+    },
+    {
+      "id": "M26_IGNORE_L2_4BLOCK_CHAIN_REORG",
+      "subsystem": "CH18 Chain Relayer Reorg Detector",
+      "status": "KILLED",
+      "exit_code": 101,
+      "elapsed_ms": 4955.1
+    }
+  ]
+}

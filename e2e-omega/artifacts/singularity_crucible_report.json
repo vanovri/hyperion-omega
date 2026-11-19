@@ -1,0 +1,162 @@
+{
+  "profile": "full-omega",
+  "elapsed_sec": 106.093,
+  "crucible_execution": {
+    "scenario": "BLACK_SWAN_SINGULARITY_20_CHANNEL",
+    "all_assertions_green": true,
+    "orders_processed": 200,
+    "wasm_ticks": 200,
+    "wasm_malware_trapped_under_100us": true,
+    "wal_chain_verified": true,
+    "raft_failover": {
+      "new_leader_id": 2,
+      "new_term": 15,
+      "election_latency_ms": 228,
+      "committed_tx_loss": 0,
+      "stale_leader_write_rejected": true
+    },
+    "ebpf_shield": {
+      "attack_packets_dropped": 10000,
+      "legit_packets_passed": 10000
+    },
+    "syndicate_frozen_accounts": 3,
+    "liquidation_waterfall": {
+      "liquidated_accounts": 1,
+      "insurance_after_fp": "56000000000000",
+      "adl_absorbed_fp": "0",
+      "unbacked_deficit_fp": "0"
+    },
+    "double_entry_conservation_holds": true,
+    "zk_solvency": {
+      "root_hash_hex": "bae91384c0120fa375eadf51234cd4bad9b8833a7093f2cb129904061c236066",
+      "total_liabilities_fp": "1295000000000000",
+      "vault_reserves_fp": "1398600000000000",
+      "solvent": true
+    },
+    "l2_reorg_defense": {
+      "reorg_detected": true,
+      "reorg_depth_blocks": 4,
+      "rolled_back_deposits": 6,
+      "double_spends_allowed": 0
+    },
+    "lakehouse_olap": {
+      "asof_matched_rows": 200,
+      "vwap_fp": "6841200000000"
+    },
+    "soak_500k_cycles_zero_drift": true,
+    "micro_optimization_passes": [
+      {
+        "name": "Pass 1: Baseline (String + Vec Clone)",
+        "iterations": 400000,
+        "p50_ns": 628.45,
+        "p99_ns": 2140.9,
+        "bytes_per_op": 64,
+        "allocs_per_op": 2
+      },
+      {
+        "name": "Pass 2: Zero-Copy Slice Refactor",
+        "iterations": 400000,
+        "p50_ns": 74.65,
+        "p99_ns": 176.95,
+        "bytes_per_op": 0,
+        "allocs_per_op": 0
+      },
+      {
+        "name": "Pass 3: #[repr(C, align(64))] Cache-Aligned Final",
+        "iterations": 400000,
+        "p50_ns": 74.65,
+        "p99_ns": 181.6,
+        "bytes_per_op": 0,
+        "allocs_per_op": 0
+      }
+    ]
+  },
+  "live_port_probes": {
+    "ledger-rs": {
+      "channel": 2,
+      "port": 50151,
+      "listening": false
+    },
+    "gateway-go": {
+      "channel": 3,
+      "port": 8080,
+      "listening": false
+    },
+    "stream-aggregator": {
+      "channel": 4,
+      "port": 50152,
+      "listening": false
+    },
+    "sentinel-ml": {
+      "channel": 5,
+      "port": 50153,
+      "listening": false
+    },
+    "aegis-agent": {
+      "channel": 6,
+      "port": 8085,
+      "listening": false
+    },
+    "chaos-sim": {
+      "channel": 7,
+      "port": 8086,
+      "listening": false
+    },
+    "chronos-replay": {
+      "channel": 8,
+      "port": 50154,
+      "listening": false
+    },
+    "terminal-web": {
+      "channel": 9,
+      "port": 3000,
+      "listening": false
+    },
+    "consensus-raft-rs": {
+      "channel": 12,
+      "port": 50161,
+      "listening": false
+    },
+    "zk-solvency-rs": {
+      "channel": 13,
+      "port": 50162,
+      "listening": false
+    },
+    "margin-risk-rs": {
+      "channel": 14,
+      "port": 50163,
+      "listening": false
+    },
+    "quant-wasm-host": {
+      "channel": 15,
+      "port": 50164,
+      "listening": false
+    },
+    "ebpf-netguard": {
+      "channel": 16,
+      "port": 50165,
+      "listening": false
+    },
+    "lakehouse-olap-rs": {
+      "channel": 17,
+      "port": 50166,
+      "listening": false
+    },
+    "chain-relayer-go": {
+      "channel": 18,
+      "port": 50167,
+      "listening": false
+    },
+    "alpha-evo-py": {
+      "channel": 19,
+      "port": 8098,
+      "listening": false
+    },
+    "sovereign-studio": {
+      "channel": 20,
+      "port": 3001,
+      "listening": false
+    }
+  },
+  "verdict": "OMEGA_SINGULARITY_VERIFIED_100_PERCENT"
+}
