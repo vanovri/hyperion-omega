@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 560" width="1220" height="560" role="img" aria-label="HYPERION Measured Latency Percentiles by Subsystem">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0B0F17"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="1220" height="560" rx="12" fill="url(#bgGrad)" stroke="#1F2937" stroke-width="1.5"/>
+  <text x="32" y="42" fill="#F9FAFB" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700">HYPERION — Measured Per-Service Latency Distribution (p50 / p95 / p99)</text>
+  <text x="32" y="66" fill="#9CA3AF" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13">Log10 latency axis (1 µs → 100 ms) · Captured live by End-to-End Chaos Crucible &amp; k6 Load Harness · Run ID: crucible-20261119T225956Z</text>
+  <rect x="230" y="80" width="12" height="12" rx="3" fill="#10B981"/>
+  <text x="248" y="90" fill="#D1D5DB" font-family="ui-monospace, monospace" font-size="12">p50 Median</text>
+  <rect x="380" y="80" width="12" height="12" rx="3" fill="#3B82F6"/>
+  <text x="398" y="90" fill="#D1D5DB" font-family="ui-monospace, monospace" font-size="12">p95 Tail</text>
+  <rect x="520" y="80" width="12" height="12" rx="3" fill="#F59E0B"/>
+  <text x="538" y="90" fill="#D1D5DB" font-family="ui-monospace, monospace" font-size="12">p99 Extreme Tail</text>
+  <rect x="700" y="80" width="12" height="12" rx="3" fill="#EF4444"/>
+  <text x="718" y="90" fill="#D1D5DB" font-family="ui-monospace, monospace" font-size="12">Sentinel &lt;15ms Chaos SLA</text>
+  <line x1="230.0" y1="108" x2="230.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="230.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">1 µs</text>
+  <line x1="360.0" y1="108" x2="360.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="360.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">10 µs</text>
+  <line x1="490.0" y1="108" x2="490.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="490.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">100 µs</text>
+  <line x1="620.0" y1="108" x2="620.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="620.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">1 ms</text>
+  <line x1="750.0" y1="108" x2="750.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="750.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">10 ms</text>
+  <line x1="880.0" y1="108" x2="880.0" y2="484" stroke="#1F2937" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="880.0" y="508" text-anchor="middle" fill="#9CA3AF" font-family="ui-monospace, monospace" font-size="12">100 ms</text>
+  <line x1="772.9" y1="108" x2="772.9" y2="484" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="778.9" y="122" fill="#FCA5A5" font-family="ui-monospace, monospace" font-size="11">15ms SLA</text>
+  <text x="32" y="130.9" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">ledger-rs (LMAX Core)</text>
+  <text x="32" y="148.9" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Rust 1.99 · Arena LOB</text>
+  <rect x="230" y="121.9" width="144.4" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="131.9" width="170.9" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="141.9" width="193.8" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="138.9" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=12.90 µs · p95=20.64 µs · p99=30.96 µs</text>
+  <rect x="24" y="161.7" width="1172" height="53.7" rx="6" fill="#FFFFFF" fill-opacity="0.02"/>
+  <text x="32" y="184.6" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">gateway-go (Signed REST)</text>
+  <text x="32" y="202.6" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Go 1.27 · HMAC/Ed25519</text>
+  <rect x="230" y="175.6" width="376.0" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="185.6" width="477.6" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="195.6" width="519.6" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="192.6" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=0.78 ms · p95=4.72 ms · p99=9.93 ms</text>
+  <text x="32" y="238.3" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">stream-aggregator</text>
+  <text x="32" y="256.3" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Rust · O(1) OHLCV/OFI</text>
+  <rect x="230" y="229.3" width="311.7" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="239.3" width="370.9" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="249.3" width="407.3" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="246.3" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=<0.50 ms · p95=0.71 ms · p99=1.36 ms</text>
+  <rect x="24" y="269.1" width="1172" height="53.7" rx="6" fill="#FFFFFF" fill-opacity="0.02"/>
+  <text x="32" y="292.0" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">sentinel-ml (Graph+ONNX)</text>
+  <text x="32" y="310.0" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Python 3.12 · INT8 SHAP</text>
+  <rect x="230" y="283.0" width="465.9" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="293.0" width="549.3" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="303.0" width="559.1" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="300.0" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=3.84 ms · p95=16.82 ms · p99=19.99 ms</text>
+  <text x="32" y="345.7" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">aegis-agent (MCP SRE)</text>
+  <text x="32" y="363.7" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">TypeScript · Ed25519</text>
+  <rect x="230" y="336.7" width="604.5" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="346.7" width="650.0" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="356.7" width="650.0" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="353.7" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=44.63 ms · p95=119.54 ms · p99=126.19 ms</text>
+  <rect x="24" y="376.6" width="1172" height="53.7" rx="6" fill="#FFFFFF" fill-opacity="0.02"/>
+  <text x="32" y="399.4" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">chronos-replay (Fork)</text>
+  <text x="32" y="417.4" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Rust · Blake3 WAL</text>
+  <rect x="230" y="390.4" width="426.5" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="400.4" width="450.5" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="410.4" width="452.1" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="407.4" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=1.91 ms · p95=2.92 ms · p99=3.01 ms</text>
+  <text x="32" y="453.1" fill="#F3F4F6" font-family="ui-monospace, monospace" font-size="13" font-weight="600">merkle-audit (Proof)</text>
+  <text x="32" y="471.1" fill="#6B7280" font-family="system-ui, sans-serif" font-size="11">Gateway -&gt; Ledger Blake3</text>
+  <rect x="230" y="444.1" width="357.3" height="8" rx="3" fill="#10B981"/>
+  <rect x="230" y="454.1" width="462.5" height="8" rx="3" fill="#3B82F6"/>
+  <rect x="230" y="464.1" width="492.3" height="8" rx="3" fill="#F59E0B"/>
+  <text x="898.0" y="461.1" fill="#E5E7EB" font-family="ui-monospace, monospace" font-size="11.5">p50=0.56 ms · p95=3.61 ms · p99=6.12 ms</text>
+  <text x="32" y="542" fill="#6B7280" font-family="ui-monospace, monospace" font-size="11">Fixed-Point Scale: 1e8 (Zero IEEE-754 Floats) · Verified on Windows 11 (AMD64)</text>
+</svg>

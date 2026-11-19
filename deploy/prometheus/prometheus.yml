@@ -19,7 +19,19 @@ scrape_configs:
     static_configs:
       - targets: ["redpanda:9644"]
 
-  - job_name: hyperion-microservices
+  - job_name: hyperion-microservices-docker
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "gateway-go:8081"
+          - "ledger-rs:8082"
+          - "stream-aggregator:8083"
+          - "sentinel-ml:8084"
+          - "aegis-agent:8085"
+          - "chaos-sim:8086"
+          - "chronos-replay:8088"
+
+  - job_name: hyperion-microservices-host
     metrics_path: /metrics
     static_configs:
       - targets:

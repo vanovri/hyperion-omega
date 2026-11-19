@@ -1,0 +1,395 @@
+{
+  "root_group": {
+    "groups": [],
+    "checks": [
+      {
+        "name": "order endpoint responded (200/201/429/403 under throttle)",
+        "path": "::order endpoint responded (200/201/429/403 under throttle)",
+        "id": "82bc2d50ce5bb16d6e979ef350ed27cd",
+        "passes": 5751,
+        "fails": 0
+      },
+      {
+        "name": "expired timestamp / replay attack strictly rejected (401/403)",
+        "path": "::expired timestamp / replay attack strictly rejected (401/403)",
+        "id": "0663c213ea9eafc72f2168bf04da2c8c",
+        "passes": 10,
+        "fails": 0
+      }
+    ],
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)",
+      "p(99)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 7018.6834
+  },
+  "metrics": {
+    "hyperion_ws_session_ms": {
+      "values": {
+        "avg": 2502.6666666666665,
+        "min": 2500,
+        "med": 2502.5,
+        "max": 2505,
+        "p(90)": 2505,
+        "p(95)": 2505,
+        "p(99)": 2505
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "hyperion_replay_attacks_rejected_total": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 10,
+        "rate": 1.4247686396568338
+      }
+    },
+    "ws_session_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 2504.1877,
+        "p(95)": 2504.1877,
+        "p(99)": 2504.1877,
+        "avg": 2502.368925,
+        "min": 2500.614,
+        "med": 2502.0118,
+        "max": 2504.1877
+      }
+    },
+    "iterations": {
+      "values": {
+        "count": 5773,
+        "rate": 822.5189356738902
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "ws_sessions": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 12,
+        "rate": 1.7097223675882005
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 10107,
+        "rate": 0.0009884353069091628,
+        "passes": 10
+      }
+    },
+    "hyperion_merkle_proof_latency_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 6.1222,
+        "avg": 1.1951696280991755,
+        "min": 0,
+        "med": 0.5601499999999999,
+        "max": 62.1112,
+        "p(90)": 2.3644,
+        "p(95)": 3.6138
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 5,
+        "min": 5,
+        "max": 33
+      }
+    },
+    "ws_msgs_received": {
+      "values": {
+        "count": 24,
+        "rate": 3.419444735176401
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_blocked": {
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0.007386488089354551,
+        "min": 0,
+        "med": 0,
+        "max": 6.2025
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0
+      }
+    },
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "value": 40,
+        "min": 40,
+        "max": 40
+      },
+      "type": "gauge"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0.52182,
+        "p(99)": 0.7597680000000001,
+        "avg": 0.048898359197390516,
+        "min": 0,
+        "med": 0,
+        "max": 4.2519,
+        "p(90)": 0
+      }
+    },
+    "hyperion_ws_binary_frames_total": {
+      "values": {
+        "count": 24,
+        "rate": 3.419444735176401
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "http_req_waiting": {
+      "values": {
+        "min": 0,
+        "med": 0.5579,
+        "max": 62.1112,
+        "p(90)": 2.79324,
+        "p(95)": 4.0618,
+        "p(99)": 7.1614,
+        "avg": 1.1847725412671832
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 10117,
+        "rate": 1441.4384327408186
+      }
+    },
+    "hyperion_orders_accepted_total": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 5751,
+        "rate": 819.3844446666451
+      }
+    },
+    "hyperion_l2_book_latency_ms": {
+      "thresholds": {
+        "p(95)<35": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1.0639817493112953,
+        "min": 0,
+        "med": 0.5785,
+        "max": 17.2888,
+        "p(90)": 2.5126,
+        "p(95)": 3.6413,
+        "p(99)": 5.885582
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 4.122719999999996,
+        "p(99)": 7.5321,
+        "avg": 1.2454433824256292,
+        "min": 0,
+        "med": 0.5895,
+        "max": 62.1112,
+        "p(90)": 2.850539999999999
+      }
+    },
+    "hyperion_order_submit_latency_ms": {
+      "values": {
+        "p(99)": 9.92935,
+        "avg": 1.549727421318029,
+        "min": 0,
+        "med": 0.7801,
+        "max": 61.5089,
+        "p(90)": 3.4846,
+        "p(95)": 4.72035
+      },
+      "thresholds": {
+        "p(95)<50": {
+          "ok": true
+        },
+        "p(99)<120": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "ws_connecting": {
+      "contains": "time",
+      "values": {
+        "med": 1.24505,
+        "max": 3.7409,
+        "p(90)": 3.0794,
+        "p(95)": 3.3770749999999996,
+        "p(99)": 3.6681350000000004,
+        "avg": 1.7698,
+        "min": 0.5073
+      },
+      "type": "trend"
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 5761,
+        "fails": 0
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 12475408,
+        "rate": 1777457.0085323981
+      }
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "p(95)": 27.81034,
+        "p(99)": 41.38495999999978,
+        "avg": 28.451777567988774,
+        "min": 0,
+        "med": 21.8092,
+        "max": 2705.144,
+        "p(90)": 25.710760000000004
+      },
+      "type": "trend"
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 6.2025,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0.004585341504398536,
+        "min": 0,
+        "med": 0
+      }
+    },
+    "hyperion_crucible_check_pass_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 7249,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate>0.95": {
+          "ok": true
+        }
+      }
+    },
+    "ws_msgs_sent": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 12,
+        "rate": 1.7097223675882005
+      }
+    },
+    "data_sent": {
+      "values": {
+        "count": 5062998,
+        "rate": 721360.0773045269
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "http_req_duration{expected_response:true}": {
+      "values": {
+        "min": 0,
+        "med": 0.5899,
+        "max": 62.1112,
+        "p(90)": 2.8515,
+        "p(95)": 4.124519999999996,
+        "p(99)": 7.5321,
+        "avg": 1.2461819135252885
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_sending": {
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 7.7871,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0.5292240000000001,
+        "avg": 0.01177248196105565
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "hyperion_analytics_query_latency_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 1.3594030000000004,
+        "avg": 0.27712837465564705,
+        "min": 0,
+        "med": 0,
+        "max": 32.948,
+        "p(90)": 0.59928,
+        "p(95)": 0.712445
+      }
+    }
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "name": "Aegis SRE Mitigations & Chaos Events",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "LMAX Matching & Gateway Throughput (Orders / sec)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 } }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(hyperion_ledger_orders_submitted_total[30s]))",
+          "legendFormat": "Ledger Orders Submitted / s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(hyperion_ledger_orders_filled_total[30s]))",
+          "legendFormat": "Ledger Orders Filled / s",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(hyperion_gateway_http_requests_total[30s]))",
+          "legendFormat": "Gateway HTTP Ingress / s",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Ledger Single-Writer Execution Latency (ns & Bucket Distribution)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ns", "custom": { "drawStyle": "line", "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "expr": "max(hyperion_ledger_last_exec_ns)",
+          "legendFormat": "Ledger Last Exec (ns)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(hyperion_ledger_latency_bucket_total{le=\"1us\"}[1m]))",
+          "legendFormat": "<1us Matches / s",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(hyperion_ledger_latency_bucket_total{le=\"5us\"}[1m]))",
+          "legendFormat": "<5us Matches / s",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Aegis Immutable BLAKE3 Audit Chain & Engine Seq",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "TAMPERED", "color": "red" }, "1": { "text": "CHAIN VALID", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "targets": [
+        {
+          "expr": "min(aegis_audit_chain_valid)",
+          "legendFormat": "BLAKE3 Audit Chain",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Active Binary WebSocket Subscribers (`0x4859`)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } }
+      },
+      "targets": [
+        {
+          "expr": "sum(hyperion_gateway_ws_connected_clients)",
+          "legendFormat": "WS Clients",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Aegis Autonomous Mitigations & Prompt-Injection Blocks",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(aegis_mitigations_executed_total)",
+          "legendFormat": "Mitigations Executed",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(aegis_prompt_injections_blocked_total)",
+          "legendFormat": "Injections Blocked",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(aegis_policy_blocks_total)",
+          "legendFormat": "Policy Gate Blocks",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Sentinel-ML Fraud Inference Latency (p99 < 10ms SLA)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 10 }] }
+        }
+      },
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum(rate(sentinel_inference_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "ONNX INT8 + Graph Cycle p99 (ms)",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.50, sum(rate(sentinel_inference_latency_seconds_bucket[1m])) by (le))",
+          "legendFormat": "ONNX INT8 + Graph Cycle p50 (ms)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Real-Time Manipulation Alerts & Active Temporal Graph Edges",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (pattern_type) (rate(sentinel_alerts_emitted_total[1m])) * 60",
+          "legendFormat": "{{pattern_type}} / min",
+          "refId": "A"
+        },
+        {
+          "expr": "max(sentinel_graph_active_edges)",
+          "legendFormat": "Active Multigraph Edges",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Stream Aggregator Events & Gateway Replay/Rate-Limit Defense",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(hyperion_aggregator_accepted_events_total[30s]))",
+          "legendFormat": "Aggregator Events / s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(hyperion_gateway_replay_rejected_total[30s]))",
+          "legendFormat": "Replay Attacks Rejected / s",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(hyperion_gateway_rate_limited_total[30s]))",
+          "legendFormat": "Rate-Limited / s",
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["hyperion", "exchange", "fraud-ml", "aegis-sre", "chronos"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "utc",
+  "title": "HYPERION — Institutional Exchange, Graph Fraud AI & Autonomous SRE Command",
+  "uid": "hyperion-prod-v1",
+  "version": 2
+}

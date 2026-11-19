@@ -1,0 +1,110 @@
+{
+  "total_mutants": 25,
+  "killed": 25,
+  "survived": 0,
+  "survived_ids": [],
+  "kill_score_pct": 100.0,
+  "elapsed_sec": 0.307,
+  "details": [
+    {
+      "mutant_id": "M01_FP_SCALE_CORRUPT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M02_PPM_SCALE_CORRUPT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M03_CRC32C_POLY_FLIP",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M04_NOTIONAL_PRICE_BOUND",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M05_NOTIONAL_QTY_BOUND",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M06_NOTIONAL_MUL_TO_ADD",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M07_FEE_MIN_BOUND_LT_TO_LE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M08_FEE_MAX_BOUND_GT_TO_GE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M09_REBATE_SIGN_INVERT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M10_CONSERVATION_WITHDRAWAL_SIGN",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M11_CONSERVATION_TREASURY_SIGN",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M12_CONSERVATION_NEG_AVAIL_ALLOW",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M13_CONSERVATION_EQ_TO_GE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M14_BOOK_BID_ORDER_GE_TO_GT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M15_BOOK_ASK_ORDER_LE_TO_LT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M16_BOOK_CROSS_GE_TO_GT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M17_PREIMAGE_METHOD_CASE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M18_WINDOW_LE_TO_LT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M19_WS_MAGIC_MUTATE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M20_WS_VERSION_SKIP",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M21_WS_RESERVED_SKIP",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M22_WS_LEN_CHECK_LE",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M23_WS_CRC_CHECK_INVERT",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M24_CHRONOS_NOOP_DELTA_SKIP",
+      "status": "KILLED"
+    },
+    {
+      "mutant_id": "M25_CHRONOS_CLOSED_EQUITY_SIGN",
+      "status": "KILLED"
+    }
+  ]
+}

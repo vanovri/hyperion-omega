@@ -115,6 +115,30 @@ impl AggregatorConfig {
         }
         cfg
     }
+
+    /// SEC-05: Refuse production startup with dev default PostgreSQL credentials or plaintext `sslmode=disable`.
+    pub fn validate_production(&self) -> Result<(), String> {
+        let is_prod = env::var("HYPERION_ENV")
+            .unwrap_or_default()
+            .trim()
+            .eq_ignore_ascii_case("production");
+        if !is_prod || !self.enable_external_io {
+            return Ok(());
+        }
+        if self.postgres_dsn.contains("hyperion_dev_secret") {
+            return Err(
+                "SECURITY_FAIL_CLOSED: DATABASE_URL must not use default dev password in production"
+                    .to_string(),
+            );
+        }
+        if self.postgres_dsn.to_ascii_lowercase().contains("sslmode=disable") {
+            return Err(
+                "SECURITY_FAIL_CLOSED: DATABASE_URL must enforce TLS (sslmode=require/verify-full) in production"
+                    .to_string(),
+            );
+        }
+        Ok(())
+    }
 }
 
 /// Canonical Redpanda topics defined in `.agents/rules/00-hyperion-contract.md` §4.2.

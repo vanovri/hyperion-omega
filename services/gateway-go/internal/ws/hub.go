@@ -121,13 +121,8 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if accountID == 0 {
-		if rawAcct := r.Header.Get("X-Hyperion-Account-Id"); rawAcct != "" {
-			if parsed, err := strconv.ParseUint(rawAcct, 10, 64); err == nil {
-				accountID = parsed
-			}
-		}
-	}
+	// SEC-03: Never trust unauthenticated X-Hyperion-Account-Id headers for private WS streams;
+	// private account streams bind strictly to cryptographically verified JWT claims.
 
 	conn, residual, format, err := UpgradeHTTP(w, r)
 	if err != nil {

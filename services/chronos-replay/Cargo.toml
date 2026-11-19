@@ -1,0 +1,33 @@
+[package]
+name = "chronos-replay"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "HYPERION Channel 08 — Chronos Deterministic Nanosecond Time-Travel Debugger & Counterfactual Timeline Fork Engine"
+
+[dependencies]
+async-stream = "0.3"
+axum = "0.7"
+blake3 = "1.5"
+bytes = "1"
+crc32c = "0.6"
+http = "1"
+hyperion-proto = { path = "../../contracts/gen/rust" }
+memmap2 = "0.9"
+prost = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "fs", "io-util", "signal"] }
+tokio-stream = { version = "0.1", features = ["sync", "net"] }
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+[dev-dependencies]
+proptest = "1.5"
+tempfile = "3"
+
+[[bench]]
+name = "fast_forward_bench"
+harness = false

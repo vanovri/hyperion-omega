@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+:root {
+  /* Institutional Obsidian & Phosphor Signal Token System */
+  --obsidian-void: #06080c;
+  --obsidian-panel: #0b0f17;
+  --obsidian-elevated: #111722;
+  --obsidian-inset: #040609;
+
+  --wire-hairline: rgba(226, 232, 240, 0.08);
+  --wire-strong: rgba(226, 232, 240, 0.18);
+
+  --ink-primary: #f1f5f9;
+  --ink-secondary: #94a3b8;
+  --ink-tertiary: #64748b;
+  --ink-muted: #475569;
+
+  --sig-bid: #00d492;
+  --sig-bid-dim: rgba(0, 212, 146, 0.14);
+  --sig-ask: #ff3b5c;
+  --sig-ask-dim: rgba(255, 59, 92, 0.15);
+  --sig-fork: #f59e0b;
+  --sig-fork-dim: rgba(245, 158, 11, 0.15);
+  --sig-telemetry: #38bdf8;
+  --sig-telemetry-dim: rgba(56, 189, 248, 0.14);
+
+  --scrollbar-track: #080b11;
+  --scrollbar-thumb: #475569;
+
+  /* Modern Web Guidance: viewport-wide dark scheme, native control tint (>=3:1 contrast), scrollbar-color */
+  color-scheme: dark;
+  accent-color: var(--sig-telemetry);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--obsidian-void);
+  color: var(--ink-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.tabular-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Modern Web Guidance: Isolate above-the-fold complex layout panes to prevent global reflow */
+.isolated-pane {
+  contain: layout style paint;
+}
+
+/* Modern Web Guidance: Defer & isolate deep scrollable log/audit containers with intrinsic placeholder */
+.offscreen-log-region {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+@supports not (content-visibility: auto) {
+  .offscreen-log-region {
+    contain: layout style paint;
+  }
+}
+
+/* Modern Web Guidance: Responsive semantic table container with sticky header */
+.data-table-region {
+  overflow: auto;
+  max-inline-size: 100%;
+  container-type: inline-size;
+}
+
+.data-table-region table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.data-table-region thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background-color: var(--obsidian-panel);
+}
+
+/* Modern Web Guidance: Native <dialog> modal scroll containment (no body overflow:hidden layout shift) */
+dialog:modal {
+  overscroll-behavior: contain;
+  background-color: var(--obsidian-elevated);
+  color: var(--ink-primary);
+  border: 1px solid var(--wire-strong);
+  border-radius: 4px;
+  padding: 0;
+  max-width: min(920px, 94vw);
+  max-height: 86vh;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(3, 6, 12, 0.8);
+  backdrop-filter: blur(3px);
+}
+
+/* Modern Web Guidance: Legacy scrollbar fallback guarded by @supports not */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 2px;
+  }
+}
+
+/* Modern Web Guidance: Progressive enhancement fallback when accent-color is unsupported */
+@supports not (accent-color: #38bdf8) {
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #1e293b;
+    border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #38bdf8;
+    margin-top: -4px;
+    cursor: pointer;
+  }
+}
+
+/* Tactile button press feedback without layout reflow */
+.cmd-btn {
+  transition: transform 110ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.cmd-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-btn:active:not(:disabled) {
+    transform: none;
+  }
+}

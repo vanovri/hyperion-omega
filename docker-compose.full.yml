@@ -1,0 +1,638 @@
+name: hyperion-full
+
+# ==============================================================================
+# HYPERION — FULL PRODUCTION-GRADE LOCAL ORCHESTRATION STACK (CHANNELS 01–10)
+# ==============================================================================
+# Launches ALL 8 infrastructure/observability containers + ALL 8 HYPERION
+# microservices & apps in strict healthcheck-ordered startup sequence with
+# minimal multi-stage distroless/alpine images and explicit resource limits.
+#
+# Quickstart:
+#   just up        (or: make demo)
+#   Open http://localhost:3000 (Terminal UI) | http://localhost:3002 (Grafana)
+# ==============================================================================
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ----------------------------------------------------------------------------
+  # LAYER 1: STREAMING, STORAGE & OBSERVABILITY INFRASTRUCTURE
+  # ----------------------------------------------------------------------------
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.10
+    container_name: hyperion-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --set=redpanda.auto_create_topics_enabled=true
+      - --set=redpanda.default_topic_partitions=8
+      - --set=redpanda.enable_idempotence=true
+      - --set=redpanda.enable_transactions=true
+    ports:
+      - "19092:19092"
+      - "18081:18081"
+      - "18082:18082"
+      - "19644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health --api-urls localhost:9644 | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 12s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1536M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  redpanda-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.10
+    container_name: hyperion-redpanda-init
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/etc/hyperion/init-topics.sh"]
+    environment:
+      REDPANDA_BROKERS: redpanda:9092
+    volumes:
+      - ./deploy/redpanda/init-topics.sh:/etc/hyperion/init-topics.sh:ro
+    networks:
+      - hyperion-mesh
+    restart: "no"
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: hyperion-timescaledb
+    environment:
+      POSTGRES_USER: ${HYPERION_PG_USER:-hyperion}
+      POSTGRES_PASSWORD: ${HYPERION_PG_PASSWORD:-hyperion_dev_secret}
+      POSTGRES_DB: ${HYPERION_PG_DB:-hyperion}
+      TIMESCALEDB_TELEMETRY: "off"
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=timescaledb
+      - -c
+      - max_connections=250
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - synchronous_commit=local
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./deploy/sql/001_init_timescaledb.sql:/docker-entrypoint-initdb.d/001_init_timescaledb.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1024M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: hyperion-redis
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 640M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: hyperion-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:14269/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: hyperion-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    depends_on:
+      jaeger:
+        condition: service_healthy
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+      - "8889:8889"
+      - "13133:13133"
+    volumes:
+      - ./deploy/otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:13133/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 384M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: hyperion-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    container_name: hyperion-grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${HYPERION_GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${HYPERION_GRAFANA_PASSWORD:-hyperion_dev_grafana}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/hyperion-command-center.json
+    ports:
+      - "${HYPERION_GRAFANA_PORT:-3002}:3000"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/helm/hyperion/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # LAYER 2: DETERMINISTIC MATCHING ENGINE & MERKLE WAL LEDGER (CH02 - RUST)
+  # ----------------------------------------------------------------------------
+  ledger-rs:
+    build:
+      context: .
+      dockerfile: services/ledger-rs/Dockerfile
+    container_name: hyperion-ledger-rs
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      otel-collector:
+        condition: service_healthy
+    environment:
+      RUST_LOG: info
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      HYPERION_LEDGER_GRPC_ADDR: 0.0.0.0:50151
+      HYPERION_LEDGER_METRICS_PORT: "8082"
+      HYPERION_DATA_DIR: /var/lib/hyperion/ledger
+      HYPERION_REDPANDA_BROKERS: redpanda:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "50151:50151"
+      - "8082:8082"
+    volumes:
+      - ledger_wal_data:/var/lib/hyperion/ledger
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1024M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # LAYER 3: STREAM ANALYTICS, FRAUD ML & TIME-TRAVEL REPLAY (CH04, CH05, CH08)
+  # ----------------------------------------------------------------------------
+  stream-aggregator:
+    build:
+      context: .
+      dockerfile: services/stream-aggregator/Dockerfile
+    container_name: hyperion-stream-aggregator
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ledger-rs:
+        condition: service_healthy
+    environment:
+      RUST_LOG: info
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      HYPERION_AGGREGATOR_GRPC_ADDR: 0.0.0.0:50152
+      HYPERION_AGGREGATOR_HTTP_ADDR: 0.0.0.0:8083
+      REDPANDA_BROKERS: redpanda:9092
+      DATABASE_URL: postgres://${HYPERION_PG_USER:-hyperion}:${HYPERION_PG_PASSWORD:-hyperion_dev_secret}@timescaledb:5432/${HYPERION_PG_DB:-hyperion}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      ENABLE_EXTERNAL_IO: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "50152:50152"
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 768M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  sentinel-ml:
+    build:
+      context: .
+      dockerfile: services/sentinel-ml/Dockerfile
+    container_name: hyperion-sentinel-ml
+    depends_on:
+      redpanda-init:
+        condition: service_completed_successfully
+      ledger-rs:
+        condition: service_healthy
+    environment:
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      SENTINEL_GRPC_PORT: "50153"
+      SENTINEL_HTTP_PORT: "8084"
+      HYPERION_REDPANDA_BROKERS: redpanda:9092
+      HYPERION_INTERNAL_AUTH_TOKEN: ${HYPERION_INTERNAL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "50153:50153"
+      - "8084:8084"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8084/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1536M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  chronos-replay:
+    build:
+      context: .
+      dockerfile: services/chronos-replay/Dockerfile
+    container_name: hyperion-chronos-replay
+    depends_on:
+      ledger-rs:
+        condition: service_healthy
+    environment:
+      RUST_LOG: info
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      HYPERION_CHRONOS_REPLAY_GRPC_ADDR: 0.0.0.0:50154
+      HYPERION_CHRONOS_REPLAY_HTTP_PORT: "8088"
+      HYPERION_DATA_DIR: /var/lib/hyperion/ledger
+      HYPERION_INTERNAL_AUTH_TOKEN: ${HYPERION_INTERNAL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "50154:50154"
+      - "8088:8088"
+    volumes:
+      - ledger_wal_data:/var/lib/hyperion/ledger:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8088/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 768M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # LAYER 4: EDGE API GATEWAY, AUTONOMOUS SRE AGENT & CHAOS SIM (CH03, CH06, CH07)
+  # ----------------------------------------------------------------------------
+  gateway-go:
+    build:
+      context: .
+      dockerfile: services/gateway-go/Dockerfile
+    container_name: hyperion-gateway-go
+    depends_on:
+      ledger-rs:
+        condition: service_healthy
+      chronos-replay:
+        condition: service_healthy
+      stream-aggregator:
+        condition: service_healthy
+      sentinel-ml:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    environment:
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      GATEWAY_PUBLIC_ADDR: :8080
+      GATEWAY_ADMIN_ADDR: :8081
+      LEDGER_GRPC_ADDRS: ledger-rs:50151
+      ANALYTICS_GRPC_ADDRS: stream-aggregator:50152
+      FRAUD_GRPC_ADDRS: sentinel-ml:50153
+      CHRONOS_GRPC_ADDRS: chronos-replay:50154
+      CHAOS_SIM_HTTP_URL: http://chaos-sim:8086
+      REDIS_ADDR: redis:6379
+      REDPANDA_BROKERS: redpanda:9092
+      ENABLE_REDPANDA: "true"
+      HYPERION_JWT_SECRET: ${HYPERION_JWT_SECRET:-hyperion-institutional-jwt-dev-secret-2026}
+      HYPERION_BOOTSTRAP_HMAC_SECRET: ${HYPERION_BOOTSTRAP_HMAC_SECRET:-hyperion-trading-hmac-dev-key-2026}
+      HYPERION_INTERNAL_AUTH_TOKEN: ${HYPERION_INTERNAL_AUTH_TOKEN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "/hyperion-gateway", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  aegis-agent:
+    build:
+      context: .
+      dockerfile: services/aegis-agent/Dockerfile
+    container_name: hyperion-aegis-agent
+    depends_on:
+      gateway-go:
+        condition: service_healthy
+      sentinel-ml:
+        condition: service_healthy
+      ledger-rs:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      HYPERION_AEGIS_AGENT_HTTP_PORT: "8085"
+      HYPERION_GATEWAY_URL: http://gateway-go:8080
+      HYPERION_GATEWAY_METRICS_URL: http://gateway-go:8081
+      HYPERION_LEDGER_METRICS_URL: http://ledger-rs:8082
+      HYPERION_STREAM_AGGREGATOR_URL: http://stream-aggregator:8083
+      HYPERION_SENTINEL_ML_URL: http://sentinel-ml:8084
+      HYPERION_CHAOS_SIM_URL: http://chaos-sim:8086
+      HYPERION_CHRONOS_REPLAY_URL: http://chronos-replay:8088
+      HYPERION_PROMETHEUS_URL: http://prometheus:9090
+      HYPERION_REDPANDA_PANDAPROXY_URL: http://redpanda:8082
+      HYPERION_REDPANDA_ADMIN_URL: http://redpanda:9644
+      HYPERION_JWT_SECRET: ${HYPERION_JWT_SECRET:-hyperion-institutional-jwt-dev-secret-2026}
+      AEGIS_HMAC_SECRET: ${AEGIS_HMAC_SECRET:-hyperion-aegis-hmac-sha256-shared-secret-v1}
+      HYPERION_INTERNAL_AUTH_TOKEN: ${HYPERION_INTERNAL_AUTH_TOKEN:-}
+      AEGIS_UPSTREAM_MODE: hybrid
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8085/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  chaos-sim:
+    build:
+      context: .
+      dockerfile: services/chaos-sim/Dockerfile
+    container_name: hyperion-chaos-sim
+    depends_on:
+      gateway-go:
+        condition: service_healthy
+      ledger-rs:
+        condition: service_healthy
+    environment:
+      HYPERION_ENV: ${HYPERION_ENV:-development}
+      CHAOS_SIM_LISTEN: :8086
+      CHAOS_SIM_BACKEND: gateway-http
+      HYPERION_GATEWAY_URL: http://gateway-go:8080
+      HYPERION_GATEWAY_WS: ws://gateway-go:8080/ws?format=binary
+      HYPERION_LEDGER_GRPC: ledger-rs:50151
+      HYPERION_AUTH_SCHEME: hmac-sha256
+      HYPERION_INTERNAL_AUTH_TOKEN: ${HYPERION_INTERNAL_AUTH_TOKEN:-}
+      CHAOS_ENABLE_PROXIES: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8086:8086"
+      - "19001-19005:19001-19005"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/chaos-sim", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # LAYER 5: INSTITUTIONAL 60 FPS COMMAND TERMINAL UI (CH09 - NEXT.JS)
+  # ----------------------------------------------------------------------------
+  terminal-web:
+    build:
+      context: .
+      dockerfile: apps/terminal-web/Dockerfile
+    container_name: hyperion-terminal-web
+    depends_on:
+      gateway-go:
+        condition: service_healthy
+      stream-aggregator:
+        condition: service_healthy
+      sentinel-ml:
+        condition: service_healthy
+      aegis-agent:
+        condition: service_healthy
+      chaos-sim:
+        condition: service_healthy
+      chronos-replay:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_GATEWAY_HTTP_URL: http://localhost:8080
+      NEXT_PUBLIC_GATEWAY_WS_URL: ws://localhost:8080/ws?format=binary
+      NEXT_PUBLIC_AGGREGATOR_HTTP_URL: http://localhost:8083
+      NEXT_PUBLIC_SENTINEL_HTTP_URL: http://localhost:8084
+      NEXT_PUBLIC_AEGIS_HTTP_URL: http://localhost:8085
+      NEXT_PUBLIC_CHAOS_HTTP_URL: http://localhost:8086
+      NEXT_PUBLIC_CHRONOS_HTTP_URL: http://localhost:8088
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging: *default-logging
+    networks:
+      - hyperion-mesh
+    restart: unless-stopped
+
+networks:
+  hyperion-mesh:
+    name: hyperion-mesh
+    driver: bridge
+
+volumes:
+  redpanda_data:
+  timescaledb_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  ledger_wal_data:

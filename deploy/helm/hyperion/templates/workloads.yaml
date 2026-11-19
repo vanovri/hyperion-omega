@@ -1,0 +1,225 @@
+{{- $fullName := include "hyperion.fullname" . -}}
+{{- $secretName := include "hyperion.secretName" . -}}
+
+{{- if .Values.services.ledgerRs.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullName }}-ledger-rs
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ledger-rs
+spec:
+  serviceName: {{ $fullName }}-ledger-rs
+  replicas: {{ .Values.services.ledgerRs.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ledger-rs
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "hyperion.labels" . | nindent 8 }}
+        app.kubernetes.io/component: ledger-rs
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/metrics"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "hyperion.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: ledger-rs
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.services.ledgerRs.image }}:{{ .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "hyperion.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.services.ledgerRs.grpcPort }}
+              protocol: TCP
+            - name: http-metrics
+              containerPort: {{ .Values.services.ledgerRs.httpPort }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ $fullName }}-config
+          env:
+            - name: HYPERION_DATA_DIR
+              value: "/var/lib/hyperion/ledger"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.services.ledgerRs.resources | nindent 12 }}
+          volumeMounts:
+            - name: ledger-wal-data
+              mountPath: /var/lib/hyperion/ledger
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if not .Values.services.ledgerRs.persistence.enabled }}
+        - name: ledger-wal-data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.services.ledgerRs.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: ledger-wal-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.services.ledgerRs.persistence.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.services.ledgerRs.persistence.size | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-ledger-rs
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ledger-rs
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: ledger-rs
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: grpc
+      port: {{ .Values.services.ledgerRs.grpcPort }}
+      targetPort: grpc
+    - name: http-metrics
+      port: {{ .Values.services.ledgerRs.httpPort }}
+      targetPort: http-metrics
+{{- end }}
+
+{{- $statelessServices := list
+  (dict "cfg" .Values.services.gatewayGo "hasGrpc" false "adminPort" .Values.services.gatewayGo.adminPort "probePort" "http-admin")
+  (dict "cfg" .Values.services.streamAggregator "hasGrpc" true "adminPort" 0 "probePort" "http")
+  (dict "cfg" .Values.services.sentinelMl "hasGrpc" true "adminPort" 0 "probePort" "http")
+  (dict "cfg" .Values.services.aegisAgent "hasGrpc" false "adminPort" 0 "probePort" "http")
+  (dict "cfg" .Values.services.chaosSim "hasGrpc" false "adminPort" 0 "probePort" "http")
+  (dict "cfg" .Values.services.chronosReplay "hasGrpc" true "adminPort" 0 "probePort" "http")
+  (dict "cfg" .Values.services.terminalWeb "hasGrpc" false "adminPort" 0 "probePort" "http")
+-}}
+
+{{- range $item := $statelessServices }}
+{{- $svc := $item.cfg }}
+{{- if $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-{{ $svc.name }}
+  labels:
+    {{- include "hyperion.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $svc.name }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ $svc.name }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "hyperion.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $svc.name }}
+        app.kubernetes.io/instance: {{ $.Release.Name }}
+      annotations:
+        prometheus.io/scrape: {{ if eq $svc.name "terminal-web" }}"false"{{ else }}"true"{{ end }}
+        prometheus.io/port: {{ if gt (int $item.adminPort) 0 }}{{ $item.adminPort | quote }}{{ else }}{{ $svc.httpPort | quote }}{{ end }}
+        prometheus.io/path: "/metrics"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- include "hyperion.podSecurityContext" $ | nindent 8 }}
+      containers:
+        - name: {{ $svc.name }}
+          image: "{{ $.Values.global.imageRegistry }}/{{ $svc.image }}:{{ $.Values.global.imageTag }}"
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- include "hyperion.containerSecurityContext" $ | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $svc.httpPort }}
+              protocol: TCP
+            {{- if gt (int $item.adminPort) 0 }}
+            - name: http-admin
+              containerPort: {{ $item.adminPort }}
+              protocol: TCP
+            {{- end }}
+            {{- if $item.hasGrpc }}
+            - name: grpc
+              containerPort: {{ $svc.grpcPort }}
+              protocol: TCP
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ $fullName }}-config
+            - secretRef:
+                name: {{ $secretName }}
+          livenessProbe:
+            httpGet:
+              path: {{ if eq $svc.name "terminal-web" }}/{{ else }}/healthz{{ end }}
+              port: {{ $item.probePort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ if eq $svc.name "terminal-web" }}/{{ else }}/healthz{{ end }}
+              port: {{ $item.probePort }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-{{ $svc.name }}
+  labels:
+    {{- include "hyperion.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $svc.name }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: {{ $svc.name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+  ports:
+    - name: http
+      port: {{ $svc.httpPort }}
+      targetPort: http
+    {{- if gt (int $item.adminPort) 0 }}
+    - name: http-admin
+      port: {{ $item.adminPort }}
+      targetPort: http-admin
+    {{- end }}
+    {{- if $item.hasGrpc }}
+    - name: grpc
+      port: {{ $svc.grpcPort }}
+      targetPort: grpc
+    {{- end }}
+{{- end }}
+{{- end }}

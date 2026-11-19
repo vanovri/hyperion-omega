@@ -1,0 +1,43 @@
+{{- $fullName := include "hyperion.fullname" . -}}
+{{- if and .Values.services.ledgerRs.enabled .Values.services.ledgerRs.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $fullName }}-ledger-rs-pdb
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ledger-rs
+spec:
+  maxUnavailable: {{ .Values.services.ledgerRs.pdb.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ledger-rs
+      app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- $pdbServices := list
+  .Values.services.gatewayGo
+  .Values.services.streamAggregator
+  .Values.services.sentinelMl
+  .Values.services.aegisAgent
+  .Values.services.chronosReplay
+  .Values.services.terminalWeb
+-}}
+{{- range $svc := $pdbServices }}
+{{- if and $svc.enabled $svc.pdb.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $fullName }}-{{ $svc.name }}-pdb
+  labels:
+    {{- include "hyperion.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $svc.name }}
+spec:
+  minAvailable: {{ $svc.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ $svc.name }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+{{- end }}
+{{- end }}

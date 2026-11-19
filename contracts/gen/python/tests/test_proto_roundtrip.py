@@ -10,17 +10,114 @@ import hyperion_proto as hp  # noqa: E402
 
 
 class HyperionProtoContractTest(unittest.TestCase):
-    def test_i128_and_u128_two_complement_roundtrip(self) -> None:
+    def test_i128_and_u128_two_complement_roundtrip_and_boundaries(self) -> None:
         for val in [0, 1, -1, (1 << 64) + 99, -((1 << 99) + 123456789), hp.MAX_I128, hp.MIN_I128]:
             pb = hp.to_i128(val)
             self.assertEqual(hp.from_i128(pb), val)
+
+        with self.assertRaises(ValueError):
+            hp.to_i128(hp.MIN_I128 - 1)
+        with self.assertRaises(ValueError):
+            hp.to_i128(hp.MAX_I128 + 1)
 
         for val in [0, 1, (1 << 64) + 7, (1 << 120) + 42, hp.MAX_U128]:
             pb_u = hp.to_u128(val)
             self.assertEqual(hp.from_u128(pb_u), val)
 
-    def test_notional_fixed_point_math(self) -> None:
+        with self.assertRaises(ValueError):
+            hp.to_u128(-1)
+        with self.assertRaises(ValueError):
+            hp.to_u128(hp.MAX_U128 + 1)
+
+    def test_notional_and_fee_fixed_point_math_boundaries(self) -> None:
         self.assertEqual(hp.compute_notional_fp(6_842_550_000_000, 125_000_000), 8_553_187_500_000)
+        trunc0 = hp.compute_notional_fp(3, 33_333_333)
+        self.assertIsInstance(trunc0, int)
+        self.assertEqual(trunc0, 0)
+        self.assertEqual(hp.compute_notional_fp(3, 33_333_334), 1)
+        self.assertEqual(hp.compute_notional_fp(0, 100_000_000), 0)
+        self.assertEqual(hp.compute_notional_fp(100_000_000, 0), 0)
+
+        with self.assertRaises(ValueError):
+            hp.compute_notional_fp(-1, 10)
+        with self.assertRaises(ValueError):
+            hp.compute_notional_fp(10, -1)
+
+        # Fee & maker rebate math + boundaries
+        self.assertEqual(hp.checked_fee_fp(8_553_187_500_000, -20), -171_063_750)
+        self.assertEqual(hp.checked_fee_fp(8_553_187_500_000, 100), 855_318_750)
+        self.assertEqual(hp.checked_fee_fp(0, 100), 0)
+        self.assertEqual(hp.checked_fee_fp(999_999, -1), 0)
+        self.assertEqual(hp.checked_fee_fp(1_000_000, -1), -1)
+        self.assertEqual(hp.checked_fee_fp(999_999, 1), 0)
+        self.assertEqual(hp.checked_fee_fp(1_000_000, 1), 1)
+        self.assertEqual(hp.checked_fee_fp(1_000_000, hp.MIN_I64), hp.MIN_I64)
+        self.assertEqual(hp.checked_fee_fp(1_000_000, hp.MAX_I64), hp.MAX_I64)
+        self.assertEqual(hp.checked_fee_fp(hp.MAX_U128, 0), 0)
+
+        with self.assertRaises(ValueError):
+            hp.checked_fee_fp(-1, 10)
+        with self.assertRaises(ValueError):
+            hp.checked_fee_fp(hp.MAX_U128 + 1, 1)
+        with self.assertRaises(ValueError):
+            hp.checked_fee_fp(100, hp.MIN_I64 - 1)
+        with self.assertRaises(ValueError):
+            hp.checked_fee_fp(100, hp.MAX_I64 + 1)
+        with self.assertRaises(OverflowError):
+            hp.checked_fee_fp(1_000_001, hp.MAX_I64)
+        with self.assertRaises(OverflowError):
+            hp.checked_fee_fp(1_000_001, hp.MIN_I64)
+
+    def test_batch_zero_copy_and_aligned64_simd(self) -> None:
+        prices = [
+            684_255_000,
+            350_120_000,
+            184_500_000,
+            245_000_000,
+            100_000_000,
+            0,
+            300_000_000,
+            500_000_000,
+        ]
+        qtys = [
+            125_000_000,
+            500_000_000,
+            1_250_000_000,
+            10_000_000_000,
+            0,
+            100_000_000,
+            33_333_334,
+            75_000_000,
+        ]
+        expected = [hp.compute_notional_fp(p, q) for p, q in zip(prices, qtys)]
+
+        # Pass 2 zero-copy into pre-allocated list with non-zero sentinels
+        out_zc = [999_999] * len(prices)
+        self.assertEqual(hp.compute_notional_batch_zero_copy(prices, qtys, out_zc), len(prices))
+        self.assertEqual(out_zc, expected)
+        self.assertEqual(hp.compute_notional_batch_zero_copy([], [], []), 0)
+        with self.assertRaises(ValueError):
+            hp.compute_notional_batch_zero_copy([-1], [1], [0])
+        with self.assertRaises(ValueError):
+            hp.compute_notional_batch_zero_copy([1], [-1], [0])
+
+        # Pass 3 cache-line aligned 64B SIMD NumPy u64
+        p_al = hp.allocate_aligned64_u64(len(prices))
+        q_al = hp.allocate_aligned64_u64(len(qtys))
+        o_al = hp.allocate_aligned64_u64(len(prices))
+        self.assertEqual(p_al.ctypes.data & 63, 0)
+        self.assertEqual(q_al.ctypes.data & 63, 0)
+        self.assertEqual(o_al.ctypes.data & 63, 0)
+        p_al[:] = prices
+        q_al[:] = qtys
+        o_al[:] = 999_999
+        self.assertEqual(hp.compute_notional_batch_aligned64_u64(p_al, q_al, o_al), len(prices))
+        self.assertEqual([int(v) for v in o_al], expected)
+        empty_al = hp.allocate_aligned64_u64(0)
+        self.assertEqual(len(empty_al), 0)
+        self.assertEqual(hp.compute_notional_batch_aligned64_u64(empty_al, empty_al, empty_al), 0)
+        with self.assertRaises(ValueError):
+            hp.allocate_aligned64_u64(-1)
 
     def test_fraud_orderbook_chronos_wire_roundtrip(self) -> None:
         edge = hp.telemetry_fraud_pb2.TransactionGraphEdge(

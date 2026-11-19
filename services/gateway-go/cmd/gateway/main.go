@@ -24,9 +24,34 @@ import (
 	"github.com/vanovri/hyperion/services/gateway-go/internal/ws"
 )
 
+func runHealthcheck() int {
+	target := os.Getenv("GATEWAY_HEALTHCHECK_URL")
+	if target == "" {
+		target = "http://127.0.0.1:8081/healthz"
+	}
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(target)
+	if err != nil {
+		return 1
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 1
+	}
+	return 0
+}
+
 func main() {
+	if len(os.Args) >= 2 && (os.Args[1] == "--healthcheck" || os.Args[1] == "healthcheck") {
+		os.Exit(runHealthcheck())
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	cfg := config.FromEnv()
+	if err := cfg.ValidateProduction(); err != nil {
+		logger.Error("production security validation failed", "err", err)
+		os.Exit(1)
+	}
 	metrics := telemetry.Global
 
 	var redisClient *redis.Client

@@ -303,7 +303,7 @@ func TestOpenAPIEndpoints_EndToEndIntegration_And_RedpandaDispatch(t *testing.T)
 	t.Cleanup(httpSrv.Close)
 
 	jwtTok, _ := auth.MintHS256(cfg.JWTSecret, auth.Claims{
-		Subject: "e2e-operator", AccountID: 10042, IssuedAt: time.Now().Unix(), ExpiresAt: time.Now().Add(time.Hour).Unix(),
+		Subject: "e2e-operator", AccountID: 10042, Roles: []string{"admin", "sre", "operator"}, IssuedAt: time.Now().Unix(), ExpiresAt: time.Now().Add(time.Hour).Unix(),
 	})
 
 	// 1. Register Ed25519 trading key via POST /api/v1/auth/keys
@@ -432,4 +432,58 @@ func TestOpenAPIEndpoints_EndToEndIntegration_And_RedpandaDispatch(t *testing.T)
 		t.Fatalf("expected HTTP 429 TooManyRequests after Redpanda FREEZE_ACCOUNT, got %v %v", blockedResp, err)
 	}
 	_ = blockedResp.Body.Close()
+
+	// 5. Security Regression Suite (SEC-02 IDOR/RBAC, SEC-05 Fail-Closed Production Secrets)
+	retailJWT, _ := auth.MintHS256(cfg.JWTSecret, auth.Claims{
+		Subject:   "retail-trader-20001",
+		AccountID: 20001,
+		Roles:     []string{"trader"},
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	})
+
+	forbiddenCases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{"deposit_mint_without_admin", http.MethodPost, "/api/v1/accounts/deposits", `{"deposit_id":"dep-evil","account_id":"20001","asset":"USDT","amount_fp":"99999900000000"}`},
+		{"register_key_cross_account_idor", http.MethodPost, "/api/v1/auth/keys", `{"account_id":"10042","key_id":"evil-key","scheme":"hmac-sha256","hmac_secret_hex":"00112233445566778899aabbccddeeff"}`},
+		{"merkle_proof_cross_account_idor", http.MethodGet, "/api/v1/accounts/10042/merkle-proof", ""},
+		{"chronos_fork_without_sre_role", http.MethodPost, "/api/v1/chronos/fork", `{"fork_name":"evil-fork","symbol":"BTC-USDT","start_engine_seq":"1","end_engine_seq":"2"}`},
+		{"chaos_campaign_without_sre_role", http.MethodPost, "/api/v1/chaos/campaigns", `{"regime":"FLASH_CRASH","enabled":true}`},
+	}
+	for _, fc := range forbiddenCases {
+		req, _ := http.NewRequest(fc.method, httpSrv.URL+fc.path, bytes.NewReader([]byte(fc.body)))
+		req.Header.Set("Authorization", "Bearer "+retailJWT)
+		if fc.method == http.MethodPost {
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Idempotency-Key", "idem-sec-"+fc.name)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("%s request failed: %v", fc.name, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusForbidden {
+			t.Fatalf("SEC-02 regression %s: expected 403 Forbidden, got %d", fc.name, resp.StatusCode)
+		}
+	}
+
+	// Retail user querying OWN account Merkle proof MUST still succeed (200 OK)
+	ownProofReq, _ := http.NewRequest(http.MethodGet, httpSrv.URL+"/api/v1/accounts/20001/merkle-proof", nil)
+	ownProofReq.Header.Set("Authorization", "Bearer "+retailJWT)
+	ownProofResp, err := http.DefaultClient.Do(ownProofReq)
+	if err != nil || ownProofResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected own account merkle-proof 200 OK, got %v %v", ownProofResp, err)
+	}
+	_ = ownProofResp.Body.Close()
+
+	// SEC-05: Production config MUST fail closed with default dev secrets
+	badProdCfg := config.FromEnv()
+	badProdCfg.Environment = "production"
+	if err := badProdCfg.ValidateProduction(); err == nil {
+		t.Fatalf("SEC-05 regression: expected ValidateProduction to reject default dev secrets")
+	}
 }

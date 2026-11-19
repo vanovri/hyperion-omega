@@ -116,10 +116,45 @@ func (s *Server) AdminHandler() http.Handler {
 	return mux
 }
 
+func hasAnyRole(claims auth.Claims, allowed ...string) bool {
+	for _, r := range claims.Roles {
+		norm := strings.ToLower(strings.TrimSpace(r))
+		for _, a := range allowed {
+			if norm == a {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (s *Server) withObservabilityAndCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.metrics.HTTPRequestsTotal.Add(1)
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		allowOrigin := "*"
+		if len(s.cfg.CORSOrigins) > 0 {
+			allowOrigin = ""
+			for _, candidate := range s.cfg.CORSOrigins {
+				if candidate == "*" {
+					allowOrigin = "*"
+					break
+				}
+				if origin != "" && candidate == origin {
+					allowOrigin = origin
+					break
+				}
+			}
+		} else if strings.EqualFold(s.cfg.Environment, "production") {
+			if origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000" {
+				allowOrigin = origin
+			} else {
+				allowOrigin = ""
+			}
+		}
+		if allowOrigin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-Idempotency-Key, X-Hyperion-Account-Id, X-Hyperion-Key-Id, X-Hyperion-Timestamp, X-Hyperion-Nonce, X-Hyperion-Signature, X-Hyperion-Auth-Scheme, Traceparent, X-Correlation-Id, X-Request-Timeout-Ms")
 		if r.Method == http.MethodOptions {
@@ -452,6 +487,11 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreditDeposit(w http.ResponseWriter, r *http.Request) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || !hasAnyRole(claims, "admin", "treasury", "operator") {
+		s.writeError(w, r, http.StatusForbidden, "FORBIDDEN_ROLE", "crediting deposits requires admin, treasury, or operator role", "")
+		return
+	}
 	var payload CreditDepositPayload
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&payload); err != nil {
 		s.writeError(w, r, http.StatusBadRequest, "INVALID_JSON", err.Error(), "")
@@ -495,6 +535,11 @@ func (s *Server) handleGetMerkleProof(w http.ResponseWriter, r *http.Request) {
 	acctID, err := parseUint64Strict(r.PathValue("account_id"), "account_id")
 	if err != nil || acctID == 0 {
 		s.writeError(w, r, http.StatusBadRequest, "INVALID_ACCOUNT_ID", "invalid account_id", "")
+		return
+	}
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || (claims.AccountID != acctID && !hasAnyRole(claims, "admin", "auditor", "sre", "operator")) {
+		s.writeError(w, r, http.StatusForbidden, "FORBIDDEN_ACCOUNT", "cannot query merkle proof for another account without auditor/admin/sre role", "")
 		return
 	}
 	var atSeq uint64
@@ -558,6 +603,11 @@ func (s *Server) handleRegisterKey(w http.ResponseWriter, r *http.Request) {
 	acctID, err := parseUint64Strict(payload.AccountID, "account_id")
 	if err != nil || acctID == 0 || strings.TrimSpace(payload.KeyID) == "" {
 		s.writeError(w, r, http.StatusBadRequest, "INVALID_KEY_SPEC", "account_id and key_id are required", "")
+		return
+	}
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || (claims.AccountID != acctID && !hasAnyRole(claims, "admin", "operator")) {
+		s.writeError(w, r, http.StatusForbidden, "FORBIDDEN_ACCOUNT", "cannot register cryptographic key for another account without admin role", "")
 		return
 	}
 	switch strings.ToLower(strings.TrimSpace(payload.Scheme)) {
@@ -787,6 +837,11 @@ func (s *Server) handleChronosSeek(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleChronosFork(w http.ResponseWriter, r *http.Request) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || !hasAnyRole(claims, "admin", "sre", "operator") {
+		s.writeError(w, r, http.StatusForbidden, "FORBIDDEN_ROLE", "counterfactual timeline fork requires admin, sre, or operator role", "")
+		return
+	}
 	var payload TimelineForkPayload
 	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&payload); err != nil {
 		s.writeError(w, r, http.StatusBadRequest, "INVALID_JSON", err.Error(), "")
@@ -867,6 +922,11 @@ func (s *Server) handleChronosFork(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleChaosCampaign(w http.ResponseWriter, r *http.Request) {
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || !hasAnyRole(claims, "admin", "sre", "operator") {
+		s.writeError(w, r, http.StatusForbidden, "FORBIDDEN_ROLE", "chaos campaign mutation requires admin, sre, or operator role", "")
+		return
+	}
 	rawBody, err := io.ReadAll(io.LimitReader(r.Body, 256*1024))
 	if err != nil {
 		s.writeError(w, r, http.StatusBadRequest, "INVALID_BODY", err.Error(), "")
@@ -879,6 +939,9 @@ func (s *Server) handleChaosCampaign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	proxyReq.Header.Set("Content-Type", "application/json")
+	if s.cfg.InternalAuthToken != "" {
+		proxyReq.Header.Set("X-Hyperion-Internal-Token", s.cfg.InternalAuthToken)
+	}
 	resp, err := s.httpClient.Do(proxyReq)
 	if err != nil {
 		s.writeError(w, r, http.StatusServiceUnavailable, "CHAOS_SIM_UNAVAILABLE", err.Error(), "")

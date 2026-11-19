@@ -1,0 +1,21 @@
+apiVersion: v2
+name: hyperion
+description: Production Kubernetes Helm Chart for HYPERION (Distributed Deterministic Exchange, Graph Fraud AI, Time-Travel Engine & Autonomous SRE Mesh)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+icon: "https://ardhyanovri.my.id/favicon.svg"
+kubeVersion: ">=1.28.0-0"
+keywords:
+  - exchange
+  - limit-order-book
+  - rust
+  - golang
+  - onnx
+  - fraud-detection
+  - mcp
+  - zero-trust
+maintainers:
+  - name: HYPERION Platform & DevSecOps Team
+annotations:
+  category: FinancialInfrastructure

@@ -3,76 +3,44 @@
 
 //! Canonical Protobuf v3, gRPC services, and 1e8 fixed-point invariants for HYPERION.
 
+pub mod fixed_point;
+
 #[allow(clippy::all, dead_code)]
 pub mod v1 {
     include!("generated/hyperion.v1.rs");
 }
 
+pub use fixed_point::*;
 pub use v1::*;
-
-/// Global fixed-point scale factor (1.00000000 = 100_000_000 atomic ticks).
-pub const FP_SCALE: u64 = 100_000_000;
-pub const FP_SCALE_I128: i128 = 100_000_000;
-pub const FP_SCALE_U128: u128 = 100_000_000;
-pub const PPM_SCALE_I128: i128 = 1_000_000;
-
-/// Binary WebSocket little-endian framing constants.
-pub const WS_FRAME_MAGIC: u16 = 0x4859;
-pub const WS_FRAME_VERSION: u8 = 0x01;
-pub const WS_HEADER_LEN: usize = 32;
-
-/// WAL & Snapshot binary magic headers.
-pub const WAL_MAGIC: &[u8; 8] = b"HYPWAL01";
-pub const SNAPSHOT_MAGIC: &[u8; 8] = b"HYPSNP01";
 
 impl From<i128> for I128 {
     #[inline]
     fn from(value: i128) -> Self {
-        Self {
-            hi: (value >> 64) as i64,
-            lo: value as u64,
-        }
+        let (hi, lo) = i128_to_parts(value);
+        Self { hi, lo }
     }
 }
 
 impl From<I128> for i128 {
     #[inline]
     fn from(value: I128) -> Self {
-        ((value.hi as i128) << 64) | (value.lo as i128)
+        parts_to_i128(value.hi, value.lo)
     }
 }
 
 impl From<u128> for U128 {
     #[inline]
     fn from(value: u128) -> Self {
-        Self {
-            hi: (value >> 64) as u64,
-            lo: value as u64,
-        }
+        let (hi, lo) = u128_to_parts(value);
+        Self { hi, lo }
     }
 }
 
 impl From<U128> for u128 {
     #[inline]
     fn from(value: U128) -> Self {
-        ((value.hi as u128) << 64) | (value.lo as u128)
+        parts_to_u128(value.hi, value.lo)
     }
-}
-
-/// Computes exact quote notional `(price_fp * qty_fp) / 1e8` without overflow.
-#[inline]
-pub fn checked_notional_fp(price_fp: u64, qty_fp: u64) -> Option<u128> {
-    let product = (price_fp as u128).checked_mul(qty_fp as u128)?;
-    Some(product / FP_SCALE_U128)
-}
-
-/// Computes signed fee `(notional_fp * fee_ppm) / 1e6` rounded toward zero.
-/// Negative `fee_ppm` represents a maker rebate.
-#[inline]
-pub fn checked_fee_fp(notional_fp: u128, fee_ppm: i64) -> Option<i64> {
-    let notional_i128 = i128::try_from(notional_fp).ok()?;
-    let raw = notional_i128.checked_mul(fee_ppm as i128)? / PPM_SCALE_I128;
-    i64::try_from(raw).ok()
 }
 
 #[cfg(test)]
@@ -97,25 +65,17 @@ mod tests {
             assert_eq!(i128::from(pb), sample);
         }
 
-        for sample in [0_u128, 1_u128, u64::MAX as u128, (1_u128 << 110) + 7, u128::MAX] {
+        for sample in [
+            0_u128,
+            1_u128,
+            u64::MAX as u128,
+            (1_u128 << 64) + 123_456_789,
+            (1_u128 << 110) + 7,
+            u128::MAX,
+        ] {
             let pb = U128::from(sample);
             assert_eq!(u128::from(pb), sample);
         }
-    }
-
-    #[test]
-    fn fixed_point_notional_and_rebate_math() {
-        // 68,425.50 USDT * 1.25 BTC = 85,531.875 USDT
-        let price_fp = 6_842_550_000_000_u64;
-        let qty_fp = 125_000_000_u64;
-        let notional = checked_notional_fp(price_fp, qty_fp).expect("notional");
-        assert_eq!(notional, 8_553_187_500_000_u128);
-
-        // Maker rebate -20 ppm (-0.2 bps), Taker fee +100 ppm (+1.0 bps)
-        let maker_fee = checked_fee_fp(notional, -20).expect("maker fee");
-        let taker_fee = checked_fee_fp(notional, 100).expect("taker fee");
-        assert_eq!(maker_fee, -171_063_750); // -1.71063750 USDT
-        assert_eq!(taker_fee, 855_318_750); // +8.55318750 USDT
     }
 
     #[test]

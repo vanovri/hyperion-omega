@@ -33,6 +33,8 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cfg = AggregatorConfig::from_env();
+    cfg.validate_production()
+        .map_err(|msg| anyhow::anyhow!(msg))?;
     tracing::info!(
         grpc_addr = %cfg.grpc_bind_addr,
         http_addr = %cfg.http_bind_addr,

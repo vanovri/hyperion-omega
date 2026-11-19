@@ -1,0 +1,45 @@
+{
+  "name": "aegis-mcp-server",
+  "version": "1.0.0",
+  "description": "HYPERION Channel 06 — Aegis Autonomous Incident-Response & Financial Risk Co-Pilot with Production Custom MCP Server",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "aegis-mcp": "./dist/cli-mcp.js",
+    "aegis-agent": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node dist/index.js",
+    "start:mcp-stdio": "node dist/cli-mcp.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.29.1",
+    "@hyperion/contracts": "file:../../contracts/gen/ts",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@noble/hashes": "^1.7.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.0",
+    "eslint": "^9.20.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^3.0.6"
+  }
+}

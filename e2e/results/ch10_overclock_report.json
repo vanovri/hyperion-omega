@@ -1,0 +1,32 @@
+{
+  "soak_500k": {
+    "cycles": 500000,
+    "elapsed_sec": 133.6079,
+    "ops_per_sec": 3742.3,
+    "mem_after_warmup_bytes": 24,
+    "mem_after_500k_bytes": 56,
+    "steady_state_leak_bytes": 32,
+    "peak_traced_bytes": 3944
+  },
+  "optimization_passes": [
+    {
+      "pass": "Pass 1: Baseline (Slice Copy + Byte-CRC + Generator)",
+      "p50_ns_per_op": 30415.7,
+      "p99_ns_per_op": 39222.1,
+      "bytes_per_op": 2.12
+    },
+    {
+      "pass": "Pass 2: Zero-Copy (memoryview + struct.unpack_from)",
+      "p50_ns_per_op": 28146.2,
+      "p99_ns_per_op": 55360.2,
+      "bytes_per_op": 2.01
+    },
+    {
+      "pass": "Pass 3: Precompiled Struct + Slice-by-4 CRC32C + Flat Sum",
+      "p50_ns_per_op": 24184.8,
+      "p99_ns_per_op": 36167.0,
+      "bytes_per_op": 1.93
+    }
+  ],
+  "p50_latency_reduction_pct": 20.49
+}

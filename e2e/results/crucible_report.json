@@ -1,0 +1,118 @@
+{
+  "run_id": "crucible-20261119T225956Z",
+  "timestamp_utc": "2026-11-19T23:00:17.970915+00:00",
+  "status": "PASSED",
+  "environment": {
+    "os": "Windows 11 (AMD64)",
+    "python": "3.14.7",
+    "k6_executed": true
+  },
+  "throughput": {
+    "ledger_core_orders_per_sec": 77519.4,
+    "gateway_e2e_orders_per_sec": 1319.4,
+    "k6_sustained_http_reqs_per_sec": 1441.4,
+    "chaos_sim_generator_orders_per_sec": 3166.0,
+    "chronos_replay_events_per_sec": 239358.0
+  },
+  "service_latencies": [
+    {
+      "service": "ledger-rs (LMAX Core)",
+      "lang": "Rust 1.99 \u00b7 Arena LOB",
+      "p50_ms": 0.0129,
+      "p95_ms": 0.02064,
+      "p99_ms": 0.03096
+    },
+    {
+      "service": "gateway-go (Signed REST)",
+      "lang": "Go 1.27 \u00b7 HMAC/Ed25519",
+      "p50_ms": 0.7801,
+      "p95_ms": 4.7203,
+      "p99_ms": 9.9293
+    },
+    {
+      "service": "stream-aggregator",
+      "lang": "Rust \u00b7 O(1) OHLCV/OFI",
+      "p50_ms": 0.0,
+      "p95_ms": 0.7124,
+      "p99_ms": 1.3594
+    },
+    {
+      "service": "sentinel-ml (Graph+ONNX)",
+      "lang": "Python 3.12 \u00b7 INT8 SHAP",
+      "p50_ms": 3.838,
+      "p95_ms": 16.8169,
+      "p99_ms": 19.9875
+    },
+    {
+      "service": "aegis-agent (MCP SRE)",
+      "lang": "TypeScript \u00b7 Ed25519",
+      "p50_ms": 44.6342,
+      "p95_ms": 119.537,
+      "p99_ms": 126.195
+    },
+    {
+      "service": "chronos-replay (Fork)",
+      "lang": "Rust \u00b7 Blake3 WAL",
+      "p50_ms": 1.9075,
+      "p95_ms": 2.9175,
+      "p99_ms": 3.0063
+    },
+    {
+      "service": "merkle-audit (Proof)",
+      "lang": "Gateway -> Ledger Blake3",
+      "p50_ms": 0.5601,
+      "p95_ms": 3.6138,
+      "p99_ms": 6.1222
+    }
+  ],
+  "phase1_liquidity": {
+    "orders_processed": 2000,
+    "fills_observed": 290,
+    "elapsed_seconds": 1.516,
+    "candles_verified": 0,
+    "ws_binary_handshake_ok": true,
+    "ws_binary_frames": 3,
+    "k6_orders_accepted": 5751,
+    "k6_replay_attacks_rejected": 10,
+    "k6_http_reqs": 10117,
+    "k6_http_rps": 1441.4,
+    "k6_checks_passed": 7249,
+    "k6_checks_failed": 0,
+    "k6_ws_binary_frames": 24
+  },
+  "adversarial_phase": {
+    "alerts_emitted": 5,
+    "detected_pattern": "WASH_TRADING_CYCLE",
+    "severity_score": 100,
+    "detection_latency_ms": 1.634,
+    "sla_under_15ms_passed": true,
+    "model_f1_score": 1.0,
+    "aegis_incident_id": "INC-crucible-20261119T225956Z",
+    "aegis_mitigation_latency_ms": 127.86,
+    "mitigation_action": "FREEZE_ACCOUNT",
+    "post_mortem_bytes": 8443,
+    "prompt_injection_blocked": true,
+    "audit_chain_valid": true,
+    "chaos_sim_audit_passed": true
+  },
+  "ledger_invariant": {
+    "double_entry_balanced": true,
+    "drift_atomic_units": 0,
+    "engine_seq": "26025",
+    "state_root_blake3": "81ddb17d60faddb660190a866d32d29fa0ba2b64422e341aade75809273dc202",
+    "total_deposits_fp": "204000000000000",
+    "total_available_fp": "203901959664425",
+    "total_locked_fp": "0",
+    "treasury_fee_pool_fp": "98040335575"
+  },
+  "chronos_fork": {
+    "noop_state_identical": true,
+    "early_mitigation_diverged": true,
+    "prevented_wash_volume_fp": "1125000000",
+    "prevented_wash_volume_human": "11.2500 BTC",
+    "rejected_orders_count": 90,
+    "replayed_events_count": 343,
+    "computation_latency_ms": 1.433,
+    "clearing_price_delta_fp": "0"
+  }
+}

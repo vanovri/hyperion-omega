@@ -45,6 +45,7 @@ test-results/
 
 # Local runtime state, WAL segments, snapshots, local volumes
 .data/
+.hyperion-runtime/
 data/wal/
 data/snapshots/
 *.wal

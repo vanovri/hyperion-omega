@@ -1,0 +1,330 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $fullName := include "hyperion.fullname" . -}}
+# 1. ZERO-TRUST DEFAULT DENY ALL INGRESS & EGRESS IN NAMESPACE
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-default-deny-all
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. ALLOW CORE DNS & OTEL TELEMETRY EGRESS FOR ALL HYPERION PODS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-allow-dns-and-otel-egress
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: hyperion-exchange
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+---
+# 3. LEDGER-RS ZERO-TRUST ISOLATION (ONLY GATEWAY, AEGIS, CHRONOS, CHAOS-SIM MAY REACH 50151)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-ledger-rs-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: ledger-rs
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["gateway-go", "aegis-agent", "chronos-replay", "chaos-sim"]
+      ports:
+        - protocol: TCP
+          port: 50151
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: prometheus
+      ports:
+        - protocol: TCP
+          port: 8082
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 9092 # Redpanda event publishing only
+---
+# 4. GATEWAY-GO EDGE POLICY (INGRESS CONTROLLER + TERMINAL-WEB -> 8080; STRICT INTERNAL EGRESS)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-gateway-go-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: gateway-go
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 14 }}
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["terminal-web", "chaos-sim", "aegis-agent"]
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["prometheus", "aegis-agent"]
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: ledger-rs
+      ports:
+        - protocol: TCP
+          port: 50151
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: chronos-replay
+      ports:
+        - protocol: TCP
+          port: 50154
+        - protocol: TCP
+          port: 8088
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: stream-aggregator
+      ports:
+        - protocol: TCP
+          port: 50152
+        - protocol: TCP
+          port: 8083
+    - ports:
+        - protocol: TCP
+          port: 9092 # Redpanda
+        - protocol: TCP
+          port: 6379 # Redis rate-limiter & idempotency
+---
+# 5. STREAM-AGGREGATOR POLICY (REDPANDA + TIMESCALEDB + REDIS; READ SERVING ON 50152/8083)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-stream-aggregator-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: stream-aggregator
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["gateway-go", "terminal-web", "aegis-agent", "prometheus"]
+      ports:
+        - protocol: TCP
+          port: 50152
+        - protocol: TCP
+          port: 8083
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 9092 # Redpanda
+        - protocol: TCP
+          port: 5432 # TimescaleDB
+        - protocol: TCP
+          port: 6379 # Redis
+---
+# 6. SENTINEL-ML POLICY (REDPANDA STREAM IN/OUT; SUBGRAPH INSPECTION FROM AEGIS & TERMINAL)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-sentinel-ml-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: sentinel-ml
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["aegis-agent", "gateway-go", "terminal-web", "prometheus"]
+      ports:
+        - protocol: TCP
+          port: 50153
+        - protocol: TCP
+          port: 8084
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 9092
+---
+# 7. AEGIS-AGENT SRE POLICY (MCP VERIFICATION & SIGNED MITIGATION DISPATCH)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-aegis-agent-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: aegis-agent
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["terminal-web", "gateway-go", "prometheus"]
+      ports:
+        - protocol: TCP
+          port: 8085
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: ledger-rs
+      ports:
+        - protocol: TCP
+          port: 50151
+        - protocol: TCP
+          port: 8082
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: sentinel-ml
+      ports:
+        - protocol: TCP
+          port: 50153
+        - protocol: TCP
+          port: 8084
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: gateway-go
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8081
+    - ports:
+        - protocol: TCP
+          port: 9092 # Redpanda
+        - protocol: TCP
+          port: 9090 # Prometheus query
+---
+# 8. CHRONOS-REPLAY & TERMINAL-WEB POLICIES
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-chronos-and-web-netpol
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: ["chronos-replay", "terminal-web"]
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 14 }}
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["gateway-go", "terminal-web", "prometheus"]
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 50154
+        - protocol: TCP
+          port: 8088
+  egress:
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["gateway-go", "stream-aggregator", "sentinel-ml", "aegis-agent", "chronos-replay", "ledger-rs"]
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8083
+        - protocol: TCP
+          port: 8084
+        - protocol: TCP
+          port: 8085
+        - protocol: TCP
+          port: 8088
+        - protocol: TCP
+          port: 50151
+    - ports:
+        - protocol: TCP
+          port: 9092
+{{- end }}

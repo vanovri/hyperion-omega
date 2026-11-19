@@ -1,0 +1,39 @@
+{
+  "name": "@hyperion/terminal-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HYPERION Institutional Command & Quantitative Surveillance Terminal (Next.js App Router, Dedicated WebWorker Binary Pipeline, Custom HTML5 Canvas/WebGL2 60fps)",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 --port 3000",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 --port 3000",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests e2e --max-warnings=0",
+    "test:unit": "npx tsx --test tests/unit-and-mutation.test.ts",
+    "bench": "node --expose-gc ./node_modules/tsx/dist/cli.mjs tests/perf-benchmark.ts",
+    "test:e2e": "playwright test",
+    "verify": "npm run typecheck && npm run lint && npm run test:unit && npm run bench && npm run build"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.2.2",
+    "@hyperion/contracts": "file:../../contracts/gen/ts",
+    "lucide-react": "^0.475.0",
+    "next": "15.5.29",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.0",
+    "@playwright/test": "^1.51.0",
+    "@tailwindcss/postcss": "^4.0.9",
+    "@types/node": "^22.13.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "eslint": "^9.21.0",
+    "eslint-config-next": "15.5.29",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.0.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

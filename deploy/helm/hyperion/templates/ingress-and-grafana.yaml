@@ -1,0 +1,57 @@
+{{- if .Values.ingress.enabled }}
+{{- $fullName := include "hyperion.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-ingress
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tlsSecretName | quote }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-gateway-go
+                port:
+                  number: 8080
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-gateway-go
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-terminal-web
+                port:
+                  number: 3000
+{{- end }}
+---
+{{- if .Values.grafanaDashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hyperion.fullname" . }}-grafana-dashboard
+  labels:
+    {{- include "hyperion.labels" . | nindent 4 }}
+    {{- toYaml .Values.grafanaDashboard.labels | nindent 4 }}
+data:
+  hyperion-command-center.json: |-
+{{ .Files.Get "dashboards/hyperion-command-center.json" | indent 4 }}
+{{- end }}

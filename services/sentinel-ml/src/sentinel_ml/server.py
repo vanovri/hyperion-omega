@@ -18,13 +18,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from concurrent import futures
+import hmac
 import os
 from pathlib import Path
 import threading
 import time
 from typing import Any
 
-from fastapi import FastAPI, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 import grpc
 from hyperion_proto import telemetry_fraud_pb2, telemetry_fraud_pb2_grpc
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
@@ -208,11 +209,27 @@ def create_http_app(
             )
         return {"alerts": [alert_to_rest_json(a) for a in alerts]}
 
+    def _verify_internal_auth(request: Request) -> None:
+        expected = os.environ.get("HYPERION_INTERNAL_AUTH_TOKEN", "").strip()
+        env_mode = os.environ.get("HYPERION_ENV", "development").strip().lower()
+        if not expected and env_mode == "production":
+            raise HTTPException(
+                status_code=401,
+                detail="HYPERION_INTERNAL_AUTH_TOKEN must be configured in production",
+            )
+        if expected:
+            provided = request.headers.get("x-hyperion-internal-token", "").strip()
+            if not provided or not hmac.compare_digest(provided, expected):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Missing or invalid X-Hyperion-Internal-Token",
+                )
+
     @app.get("/api/v1/fraud/subgraph/{account_id}")
     def get_subgraph(
         account_id: int,
         symbol: str = Query(default=""),
-        max_hops: int = Query(default=2, ge=1, le=4),
+        max_hops: int = Query(default=2, ge=1, le=6),
         lookback_window_ns: int = Query(default=0, ge=0),
     ) -> dict[str, Any]:
         with eff_lock:
@@ -224,8 +241,25 @@ def create_http_app(
             )
         return subgraph_to_rest_json(report)
 
+    @app.get("/api/v1/fraud/subgraph")
+    def get_subgraph_query(
+        center_account_id: int = Query(..., ge=1),
+        symbol: str = Query(default=""),
+        max_hops: int = Query(default=2, ge=1, le=6),
+        lookback_window_ns: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        with eff_lock:
+            report = engine.inspect_fraud_subgraph(
+                center_account_id=center_account_id,
+                symbol=symbol,
+                max_hops=max_hops,
+                lookback_window_ns=lookback_window_ns,
+            )
+        return subgraph_to_rest_json(report)
+
     @app.post("/api/v1/fraud/ingest/fill")
-    def post_fill(body: FillIngestPayload) -> dict[str, Any]:
+    def post_fill(body: FillIngestPayload, request: Request) -> dict[str, Any]:
+        _verify_internal_auth(request)
         price_fp = _coerce_fp_int(body.price_fp)
         qty_fp = _coerce_fp_int(body.qty_fp)
         t0 = time.perf_counter()
@@ -248,7 +282,8 @@ def create_http_app(
         return {"alerts": [alert_to_rest_json(a) for a in alerts]}
 
     @app.post("/api/v1/fraud/ingest/l3-delta")
-    def post_l3_delta(body: L3DeltaIngestPayload) -> dict[str, Any]:
+    def post_l3_delta(body: L3DeltaIngestPayload, request: Request) -> dict[str, Any]:
+        _verify_internal_auth(request)
         price_fp = _coerce_fp_int(body.price_fp)
         qty_fp = _coerce_fp_int(body.qty_fp)
         t0 = time.perf_counter()
