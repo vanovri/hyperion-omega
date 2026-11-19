@@ -1,0 +1,37 @@
+[package]
+name = "quant-wasm-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Hyperion Channel 15: Co-Located Deterministic Zero-Syscall Wasmtime Quant Sandbox Host"
+
+[[bin]]
+name = "quant-wasm-host"
+path = "src/main.rs"
+
+[dependencies]
+hyperion-quant-abi = { path = "../crates/hyperion-quant-abi" }
+wasmtime = { version = "50.0.2", default-features = false, features = ["std", "cranelift", "runtime", "wat", "anyhow", "parallel-compilation"] }
+anyhow = "1.0"
+thiserror = "2.0"
+blake3 = "1.5"
+ed25519-dalek = { version = "2.1", default-features = false, features = ["fast", "std"] }
+bytes = "1.8"
+prost = "0.13"
+tonic = { version = "0.12", features = ["transport", "gzip"] }
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal", "io-util"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+prost-build = "0.13"
+tonic-build = "0.12"
+
+[dev-dependencies]
+hyperion-quant-sdk = { path = "../crates/hyperion-quant-sdk" }
+criterion = { version = "0.5", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "tick_latency"
+harness = false

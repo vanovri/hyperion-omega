@@ -1,0 +1,135 @@
+{
+  "abi_version": 1,
+  "artifacts": {
+    "stat_arb_zscore.wasm": {
+      "size_bytes": 41040,
+      "sha256": "bd6410dc083481d7f1a7c02a9f2a335837aafac62d60ef38b62bd89b71e5a8e1",
+      "blake2b_256": "84ec6818f9475ab64dcac247b5bcc3271f2fa4726e005d9c9984b9c068359f19",
+      "imports": [
+        {
+          "module": "hyperion",
+          "name": "cancel_order",
+          "kind": 0
+        },
+        {
+          "module": "hyperion",
+          "name": "submit_limit_order",
+          "kind": 0
+        }
+      ],
+      "memories": [
+        {
+          "initial_pages": 16,
+          "initial_bytes": 1048576,
+          "max_pages": 256,
+          "max_bytes": 16777216
+        }
+      ],
+      "exports": [
+        "memory",
+        "hyperion_abi_shm_ptr",
+        "hyperion_export_state",
+        "hyperion_import_state",
+        "on_book_l2_tick",
+        "on_init",
+        "on_order_fill",
+        "on_trade_tick"
+      ]
+    },
+    "obi_sniper.wasm": {
+      "size_bytes": 39649,
+      "sha256": "76916110cf4318ba7f1a250d106b2f18d0b726d3fd16bb2fd14b97f120876c2d",
+      "blake2b_256": "318022267cccf17dfd23b9aa3a9dee6e6fecd433537d2b1d8aa9c034b6ebcacd",
+      "imports": [
+        {
+          "module": "hyperion",
+          "name": "submit_limit_order",
+          "kind": 0
+        }
+      ],
+      "memories": [
+        {
+          "initial_pages": 16,
+          "initial_bytes": 1048576,
+          "max_pages": 256,
+          "max_bytes": 16777216
+        }
+      ],
+      "exports": [
+        "memory",
+        "hyperion_abi_shm_ptr",
+        "hyperion_export_state",
+        "hyperion_import_state",
+        "on_book_l2_tick",
+        "on_init",
+        "on_order_fill",
+        "on_trade_tick"
+      ]
+    },
+    "delta_hedger.wasm": {
+      "size_bytes": 35053,
+      "sha256": "ac482f704b85b828c1784fa20fe56eb8e1c2f54e1972be06f06d96aaa499d58e",
+      "blake2b_256": "4ced869c002587fced33939085e63f759d455f866bde0cfe016313270e7e81c4",
+      "imports": [
+        {
+          "module": "hyperion",
+          "name": "cancel_order",
+          "kind": 0
+        },
+        {
+          "module": "hyperion",
+          "name": "submit_limit_order",
+          "kind": 0
+        }
+      ],
+      "memories": [
+        {
+          "initial_pages": 16,
+          "initial_bytes": 1048576,
+          "max_pages": 256,
+          "max_bytes": 16777216
+        }
+      ],
+      "exports": [
+        "memory",
+        "hyperion_abi_shm_ptr",
+        "hyperion_export_state",
+        "hyperion_import_state",
+        "on_book_l2_tick",
+        "on_init",
+        "on_order_fill",
+        "on_trade_tick"
+      ]
+    },
+    "malware_bombs.wasm": {
+      "size_bytes": 29057,
+      "sha256": "e28ff15ac818934c10e9412196a70d1b056e6a497d48c5eb2b44293139ad02ad",
+      "blake2b_256": "8deae31ffbcfc8bd5e4235920bb07459fd312f4babf747883468512dd77fb37b",
+      "imports": [
+        {
+          "module": "hyperion",
+          "name": "submit_limit_order",
+          "kind": 0
+        }
+      ],
+      "memories": [
+        {
+          "initial_pages": 16,
+          "initial_bytes": 1048576,
+          "max_pages": 256,
+          "max_bytes": 16777216
+        }
+      ],
+      "exports": [
+        "memory",
+        "hyperion_abi_shm_ptr",
+        "hyperion_export_state",
+        "hyperion_import_state",
+        "on_book_l2_tick",
+        "on_init",
+        "on_order_fill",
+        "on_trade_tick"
+      ]
+    }
+  }
+}

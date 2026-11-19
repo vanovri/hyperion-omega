@@ -1,0 +1,9 @@
+[package]
+name = "hyperion-quant-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Lightweight #![no_std] Rust Guest SDK for Hyperion Co-Located Serverless Quant Sandbox"
+
+[dependencies]
+hyperion-quant-abi = { path = "../hyperion-quant-abi" }

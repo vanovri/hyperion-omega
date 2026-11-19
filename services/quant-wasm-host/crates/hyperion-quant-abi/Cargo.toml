@@ -1,0 +1,8 @@
+[package]
+name = "hyperion-quant-abi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Zero-allocation cache-line aligned Host-Guest shared linear memory ring-buffer ABI for Hyperion Quant Sandbox"
+
+[dependencies]

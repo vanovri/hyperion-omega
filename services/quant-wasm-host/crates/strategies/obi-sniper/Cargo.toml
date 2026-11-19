@@ -1,0 +1,12 @@
+[package]
+name = "obi-sniper"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Reference Strategy 2: 5-Level Order Book Liquidity Slope & Microstructure Sniper (.wasm)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hyperion-quant-sdk = { path = "../../hyperion-quant-sdk" }
