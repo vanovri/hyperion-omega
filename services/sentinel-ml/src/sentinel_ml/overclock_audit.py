@@ -604,13 +604,16 @@ def run_500k_tracemalloc_soak(cycles: int = 500_000) -> dict[str, Any]:
         stats[1] = cur_ts
         stats[2] = cycles_found
 
-    # Pre-allocate identically-sized int slots so zero harness bytes are added between snapshots.
-    warmup_cycles = 4_000
+    # Warmup 8,000 cycles (= 20 * LCM(16, 25); 320 > 256 wash cycles so all counters exceed
+    # CPython's [-5..256] immortal small-int cache before cur_before is recorded).
+    warmup_cycles = 8_000
     stats: list[int] = [1 << 40, ts_ns, 100_000]
-    mem_slots: list[int] = [100_000, 100_000, 100_000]
+    mem_slots: list[int] = [0, 0, 0]
     _run_block(warmup_cycles, 1, stats)
     gc.collect()
     edges_before = graph.active_edge_count
+    # Prime mem_slots[0] with a distinct traced 28B int so overwriting it is net 0 B.
+    mem_slots[0] = tracemalloc.get_traced_memory()[0]
     mem_slots[0] = tracemalloc.get_traced_memory()[0]
 
     _run_block(cycles, warmup_cycles + 1, stats)

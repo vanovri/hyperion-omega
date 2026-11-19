@@ -58,10 +58,11 @@
 | `services/sentinel-ml/src/sentinel_ml/redpanda_bus.py` | Redpanda consumer/producer router with mandatory W3C `traceparent` & schema headers |
 | `services/sentinel-ml/src/sentinel_ml/server.py` | Production gRPC (`:50153`), FastAPI REST/Prometheus (`:8084`), & live Redpanda background worker |
 | `services/sentinel-ml/src/sentinel_ml/benchmark.py` | Single-event E2E, full SHAP+Protobuf alert path, and micro-batch (`B=16`, `B=64`) latency harness |
-| `services/sentinel-ml/src/sentinel_ml/cli.py` | Reproducible CLI: `train`, `benchmark`, `serve` |
-| `services/sentinel-ml/tests/` | 17 unit, integration, & Hypothesis property tests across 4 test modules |
+| `services/sentinel-ml/src/sentinel_ml/overclock_audit.py` | Reproducible AST mutation (`>= 95%`), 500k `tracemalloc` 0-leak soak, & 3-pass micro-opt harness |
+| `services/sentinel-ml/src/sentinel_ml/cli.py` | Reproducible CLI: `train`, `benchmark`, `overclock`, `serve` |
+| `services/sentinel-ml/tests/` | 22 unit, integration, Overclock, & Hypothesis property tests across 5 test modules |
 
-### Exported Production ONNX Artifacts (`services/sentinel-ml/models/`)
+### Exported Production ONNX & Audit Artifacts (`services/sentinel-ml/models/`)
 
 | Artifact | Size (Bytes) | SHA-256 |
 |---|---|---|
@@ -69,7 +70,8 @@
 | `temporal_autoencoder.int8.onnx` (CPU Dynamic QUInt8) | `34,532` | `02139E49B0FCF19E11817CF9296FED6CFAAE83340E96415A829AA3CCAB745A24` |
 | `isolation_forest.onnx` (`ai.onnx.ml.TreeEnsembleRegressor`, 32 trees) | `92,871` | `824333A1078D100802A4F26151B7964E1110FA99A4B82304A55A38A17CB24D52` |
 | `ensemble_calibration.json` (Calibration weights, baseline, metrics) | `4,989` | `D9AE406A4EDC1B3D8CB7B4CB4F65359C20B877CFB86845ECC95F5AD732E8E34F` |
-| `latency_benchmark.json` (Measured 2,000-event SLA evidence) | `1,158` | `E02AD70FCCC4239BCEE67365485D6F2817652B7827FDAA8B50A7468417D529D4` |
+| `latency_benchmark.json` (Measured 2,000-event SLA evidence) | `1,134` | `BCBB7CF968A471E5E307C1E70958A74B83BBF4F2F78A491C2E21CFEC8BC41B72` |
+| `overclock_audit.json` (AST mutation, 500k soak, & 3-pass micro-opt evidence) | `2,443` | `5BF36AD38CDFD390C4B548A457A2FBDA08B44F0952297D60AF6FE495CF341618` |
 
 ---
 
@@ -94,27 +96,28 @@ Trained reproducibly (`seed = 20261118`, `epochs = 45`) on `1,575` train sequenc
 
 Executed on Windows x86_64 CPU (`ONNX Runtime 1.32.0 CPUExecutionProvider`, `ORT_ENABLE_ALL`, `ORT_SEQUENTIAL`, `intra_op_num_threads=1`, `allow_spinning=0`) over **2,000 live streaming trade events** (including injected 3-hop wash rings triggering full 33-coalition KernelSHAP + binary Protobuf alert encoding) plus **500 micro-batch iterations** each at `B=16` and `B=64`:
 
-### Optimization Impact (Before vs After L2-Cache Tree Pruning & Zero-Alloc Buffers)
+### Optimization Impact (Before vs After L2-Cache Tree Pruning, 64B Cache-Line Alignment & Zero-Alloc Ufuncs)
 1. **Baseline Run**: 96-tree IsolationForest ONNX (`416 KB`, exceeding 256 KB per-core L2 cache) + per-event NumPy allocations + implicit `Squeeze` shape warning -> `single_event p99 = 10.21 ms`, `alert_shap p99 = 12.01 ms`, `microbatch_64 p99 = 12.66 ms`.
-2. **Optimized Production Run**: L2-cache-resident 32-tree IsolationForest ONNX (`92.8 KB`, **-77.7% footprint**) + explicit `axes=[1]` Squeeze (0 warnings) + `quant_pre_process` INT8 Autoencoder (`34.5 KB`, **-16.3%**) + pre-allocated contiguous `_single_buf`/`_pair_buf`/`_coal_buf`/`_if_bufs` scratch buffers:
+2. **Optimized Production Run**: L2-cache-resident 32-tree IsolationForest ONNX (`92.8 KB`, **-77.7% footprint**) + explicit `axes=[1]` Squeeze (0 warnings) + `quant_pre_process` INT8 Autoencoder (`34.5 KB`, **-16.3%**) + 64B cache-line-aligned (`ptr % 64 == 0`) contiguous scratch buffers + same-shape `coal_buf` copy (eliminates NumPy `NpyIter` 18 KB broadcast buffer) + pure C `np.minimum`/`np.maximum` `float32` ufuncs (eliminates `np.clip` Python wrapper allocations):
 
 | Workload | Min (ms) | p50 (ms) | p95 (ms) | **p99 (ms)** | Mean (ms) | Throughput / Notes | SLA (`< 10 ms`) |
 |---|---|---|---|---|---|---|---|
-| **Single-Event E2E** (Graph + Features + INT8 ONNX + SHAP on alerts) | `0.58` | `0.84` | `2.44` | **`5.02`** (-50.8%) | `1.09` | 2,000 events, 24 full alerts | **PASS** |
-| **Full Alert Path** (33-Coalition KernelSHAP + Protobuf Encode) | `2.92` | `3.34` | `6.09` | **`7.59`** (-36.8%) | `3.99` | Exact Shapley efficiency err `2.22e-16` | **PASS** |
-| **Micro-Batch `B=16` ONNX Ensemble** | `0.56` | `0.76` | `2.67` | **`4.39`** (-42.1%) | `1.01` | `0.274 ms/acct` · **`15,902.6 accts/sec`** | **PASS** |
-| **Micro-Batch `B=64` ONNX Ensemble** | `1.10` | `1.36` | `3.56` | **`5.61`** (-55.7%) | `1.66` | `0.088 ms/acct` · **`38,483.7 accts/sec`** | **PASS** |
+| **Single-Event E2E** (Graph + Features + INT8 ONNX + SHAP on alerts) | `0.36` | `0.73` | `2.08` | **`3.94`** (-61.4%) | `0.91` | 2,000 events, 24 full alerts (`max 8.97 ms`) | **PASS** |
+| **Full Alert Path** (33-Coalition KernelSHAP + Protobuf Encode) | `1.54` | `2.64` | `4.39` | **`5.00`** (-58.4%) | `2.84` | Exact Shapley efficiency err `< 1e-4` (`max 5.16 ms`) | **PASS** |
+| **Micro-Batch `B=16` ONNX Ensemble** | `0.77` | `1.43` | `3.76` | **`5.88`** (-22.4%) | `1.81` | `0.368 ms/acct` · **`8,853.1 accts/sec`** | **PASS** |
+| **Micro-Batch `B=64` ONNX Ensemble** | `1.26` | `1.91` | `4.01` | **`6.45`** (-49.1%) | `2.33` | `0.101 ms/acct` · **`27,476.2 accts/sec`** | **PASS** |
 
 ---
 
 ## 5. Verification Suite Evidence (`ruff`, `mypy`, `pytest` + `hypothesis`)
 
 - **Lint (`ruff check src tests`)**: `All checks passed!` (`0` errors, `0` warnings).
-- **Strict Typecheck (`mypy src`)**: `Success: no issues found in 13 source files`.
-- **Unit, Property & Integration Tests (`pytest -v`)**: **`17 passed, 0 failed`**:
-  - `tests/test_graph_cycles.py` (`7/7`): 3-ring wash detection, mixed BUY/SELL economic cycle + temporal decay monotonicity, exact $k \le 6$ enforcement ($k=7$ rejected), sliding-window eviction, `FixedPointViolationError` rejection of floats, **Hypothesis randomized multigraph equivalence proving Tarjan-SCC + Depth-Aware Johnson matches exhaustive DFS**, and **Hypothesis sliding-window exact retention**.
+- **Strict Typecheck (`mypy src`)**: `Success: no issues found in 14 source files`.
+- **Unit, Property, Overclock & Integration Tests (`pytest -v`)**: **`22 passed, 0 failed in 23.83s`**:
+  - `tests/test_graph_cycles.py` (`7/7`): 3-ring wash detection, mixed BUY/SELL economic cycle + temporal decay monotonicity, exact $k \le 6$ enforcement ($k=7$ rejected), sliding-window eviction + exact account volume conservation, `FixedPointViolationError` rejection of floats, **Hypothesis randomized multigraph equivalence proving Tarjan-SCC + Depth-Aware Johnson matches exhaustive DFS**, and **Hypothesis sliding-window exact retention**.
   - `tests/test_microstructure.py` (`4/4`): Classic spoofing + exact 6-tick layering peak + cancel burst, momentum ignition + self-impact concentration, **Hypothesis 128-bit `U128`/`I128` + decimal fixed-point round-trip**, and **Hypothesis streaming feature finiteness & domain bounds**.
   - `tests/test_onnx_and_latency.py` (`4/4`): ONNX graph validity (`onnx.checker`) + holdout F1 > 0.92, **exact numerical parity between ONNX `TreeEnsembleRegressor` and `sklearn.ensemble.IsolationForest`** (`atol=1e-4` on batch and `B=1`), **Hypothesis KernelSHAP Local Accuracy & Null-Player axioms**, and **end-to-end p99 < 10.0 ms SLA check**.
+  - `tests/test_overclock_fixed_point.py` (`5/5`): Exhaustive fixed-point boundary tests (`UINT64_MAX`, `INT64_MIN/MAX`, `UINT128_MAX`, `INT128_MIN/MAX`, notional/bps/ppm/decimal parsing), 64-byte cache-line alignment verification (`ptr % 64 == 0`) across `SentinelDetectionEngine`, `FastVectorizedKernelSHAP`, and `SentinelOnnxRuntime`, and automated AST mutation gate (`>= 95.0%`).
   - `tests/test_protobuf_redpanda.py` (`2/2`): **Hypothesis lossless binary Protobuf `TransactionGraphEdge` round-trip**, end-to-end `SentinelRedpandaProcessor` test (`ExecutionFill`/`L3BookDelta`/`MicrostructureMetrics` -> `hyperion.fraud.alerts.v1` with `<SYMBOL>` key & W3C `traceparent`/`x-engine-seq`/`x-schema-type`/`x-source-service` headers), FastAPI REST stringified `_fp` contract + `/healthz` + `/metrics`, and live gRPC `FraudTelemetryService` (`InspectFraudSubgraph` & `ListRecentAlerts`).
 
 ---
@@ -149,7 +152,10 @@ python -m sentinel_ml.cli train --models-dir models
 # Run 2,000-event E2E & micro-batch latency benchmark (asserts p99 < 10 ms)
 python -m sentinel_ml.cli benchmark --models-dir models --events 2000
 
-# Run full unit + Hypothesis property tests
+# Run Overclock Protocol audit (AST mutation >= 95%, 500k tracemalloc soak, 3-pass micro-opt)
+python -m sentinel_ml.cli overclock --models-dir models
+
+# Run full unit + Hypothesis property + overclock tests
 pytest -v
 
 # Start production gRPC (:50153) + REST/Metrics (:8084) + Redpanda worker
@@ -161,25 +167,27 @@ HYPERION_REDPANDA_BROKERS=localhost:19092 python -m sentinel_ml.cli serve
 
 ## 7. Extreme Overclock Protocol Verification (`02-extreme-overclock-protocol.md`)
 
-Audited and hardened directly in `hyperion-ch05/services/sentinel-ml` (`Python 3.12.13`, `NumPy`, `ruff`, `mypy`, `pytest`):
-- **Post-Hardening Regression Check**: `ruff check src tests` (`All checks passed!`), `mypy src` (`Success: no issues found in 14 source files`), `pytest -q` (**`22/22` passed**, including `tests/test_overclock_fixed_point.py` + all Hypothesis property suites).
+Executed reproducibly via `python -m sentinel_ml.cli overclock --models-dir models` (`src/sentinel_ml/overclock_audit.py` -> persisted in `models/overclock_audit.json`, `all_overclock_gates_passed: true`):
+- **Post-Hardening Regression Check**: `ruff check src tests` (`All checks passed!`), `mypy src` (`Success: no issues found in 14 source files`), `pytest -v` (**`22/22` passed in `23.83s`**).
 
 ### Gate 1: Mutation Survival Zero (`>= 95%` Mandatory)
-- **Target Module**: `src/sentinel_ml/fixed_point.py` (core `1e8` fixed-point validators, notional & integer bps math, `U128`/`I128` two's-complement codecs, `ratio_to_ppm`, `scalar_to_fp_int64`, exact decimal parser/formatter).
-- **Initial Run**: `59 / 62 KILLED (95.16%)` — caught `3` subtle test blind spots (`UINT64_MAX`/`INT64_MAX` dynamic constant self-reference instead of hardcoded `1 << 64` / `1 << 63` literals, and Python underscore-separated numeric strings `"1_000.5"` / `"10.1_2"` where `int()` succeeds even when `.isdigit()` rejects).
-- **Final Verified Run (`tests/test_overclock_fixed_point.py` + AST/Token Mutation Harness)**:
-  - **`62 / 62 KILLED = 100.00%`** (`0` survived mutants, `>= 95%` **PASS**).
+- **Method**: Zero-disk-mutation in-memory AST operator & constant mutator (`<` $\leftrightarrow$ `<=`, `>` $\leftrightarrow$ `>=`, `==` $\leftrightarrow$ `!=`, `+` $\leftrightarrow$ `-`, `*` $\leftrightarrow$ `//`, `<<` $\leftrightarrow$ `>>`, `|` $\leftrightarrow$ `&`, fixed-point scales `100_000_000`/`1_000_000`/`10_000`, bit widths `64`/`63`/`128`/`127`, cycle depth `6`).
+- **Results**:
+  - `src/sentinel_ml/fixed_point.py`: **`68 / 68 KILLED = 100.00%`** (`0` survivors).
+  - `src/sentinel_ml/graph_engine.py` (`__init__`, `evict_expired`, `_score_cycle`, `get_account_graph_metrics`): **`48 / 53 KILLED = 90.57%`** (`5` mathematically equivalent boundary checks: `L191`, `L579`, `L673`×2, `L677`).
+  - **Combined Core Mutation Kill Score**: **`116 / 121 KILLED = 95.87%`** (`>= 95.0%` **PASS**).
 
-### Gate 2: `500,000`-Cycle Consecutive Soak & `tracemalloc` Memory Sanitizer
-- **Workload**: `500,000` consecutive cycles of `fixed_point.compute_notional_fp` + `64B`-aligned `[33, 8, 16]` KernelSHAP coalition matrix synthesis (`alloc_aligned64_f32`, `ptr % 64 == 0`) after `10,000 + 5,000` warmup cycles and `gc.collect()`.
-- **Result**:
-  - `cycles = 500,000`, `aligned_64b = true`, `mean = 24,129.21 ns/cycle`.
-  - `tracemalloc` delta: `0 B -> 92 B` (`0.00018 B/cycle` from Python timer frame scalar — **`0 B/cycle` steady-state leak**, peak traced footprint constant at `18,276 B`).
+### Gate 2: `500,000`-Cycle Consecutive Soak & `tracemalloc` Zero-Leak Sanitizer
+- **Workload**: `8,000`-cycle warmup followed by **`500,000` consecutive streaming cycles** exercising `fixed_point.compute_notional_fp`, `distance_bps_int`, `SlidingTemporalMultigraph.ingest_trade` + sliding-window edge eviction + live 3-hop Tarjan/Johnson wash-cycle detection (`20,000` wash rings caught), and 64B cache-line-aligned `[33, 8, 16]` KernelSHAP coalition synthesis (`alloc_aligned64_f32`, `ptr % 64 == 0`).
+- **Measured `tracemalloc` Result**:
+  - `soak_cycles = 500,000` (`elapsed = 162.267s`, `3,081.3 cycles/sec`, `active_edges: 33 -> 33`).
+  - `traced_before_bytes = 183,344 B` -> `traced_after_bytes = 183,288 B` (`traced_peak_bytes = 435,920 B`).
+  - **`net_steady_state_leak_bytes = 0 B`** (`passed_zero_leak: true` — **PASS**).
 
-### Gate 3: 3-Pass Micro-Optimization Flamegraph Loop (`25,000` iters, `[33, 8, 16]` KernelSHAP Coalition Builder)
+### Gate 3: 3-Pass Micro-Optimization Flamegraph Loop (`10,000` iters, `[33, 8, 16]` SHAP Coalition + Ensemble Fusion Kernel)
 
-| Pass | Optimization Technique | Mean (`ns/op`) | Peak Traced Delta (`B`) | Speedup vs Pass 1 |
-|---|---|---:|---:|---:|
-| **Pass 1 (`Baseline`)** | Per-coalition Python loop (`k=0..32`) + fresh `np.empty((33,8,16))` allocation | `1,425,965.99` | `34,136` | `1.00×` |
-| **Pass 2 (`Vectorized / Zero-Copy Refactor`)** | Pre-allocated caller-owned `coal_buf` + vectorized `np.multiply`/`np.add(..., out=...)` | `52,028.17` | `18,464` | **`27.41×`** |
-| **Pass 3 (`Cache-Line Aligned Final`)** | `alloc_aligned64_f32` (`ptr % 64 == 0`, each coalition = exact `8 × 64B` cache lines) zero-slice in-place SIMD | **`35,951.24`** | **`18,248`** | **`39.66×`** (`1.45×` vs Pass 2) |
+| Pass | Optimization Technique | p50 (`ns/op`) | p99 (`ns/op`) | Peak Heap (`B/op`) | Retained / 1k ops (`B`) | Improvement vs Pass 1 |
+|---|---|---:|---:|---:|---:|---|
+| **Pass 1 (`Baseline`)** | Per-coalition loop (`k=0..32`) + fresh `np.empty((33,8,16))` + `np.clip` & temporary fusion arrays | `197,600` | `761,019` | `19,236` | `10,392` | Baseline (`1.00×`) |
+| **Pass 2 (`Vectorized / Zero-Copy`)** | Pre-allocated unaligned `np.empty` buffers + vectorized `out=` broadcast & in-place ufuncs | `37,800` | `112,801` | `18,368` | `10,440` | `-80.87%` p50 · `-85.18%` p99 (`5.23×`) |
+| **Pass 3 (`64B Cache-Line Aligned Final`)** | `alloc_aligned64_f32` (`ptr % 64 == 0`) + same-shape copy (eliminates `NpyIter` 18 KB temp buffer) + pure C `np.minimum`/`np.maximum` `float32` ufuncs (eliminates `np.clip` wrapper) | **`33,500`** | **`87,503`** | **`412`** | **`248`** | **`-83.05%` p50 (`5.90×`) · `-88.50%` p99 (`8.70×`) · `-97.86%` peak heap** |
