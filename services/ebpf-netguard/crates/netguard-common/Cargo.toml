@@ -1,0 +1,12 @@
+[package]
+name = "netguard-common"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR GPL-2.0-only"
+description = "Zero-dependency #![no_std] shared ABI, RFC 1071 checksums, and verifier-safe zero-copy packet parser for HYPERION eBPF/XDP NetGuard"
+
+[features]
+default = []
+std = []
+
+[dependencies]

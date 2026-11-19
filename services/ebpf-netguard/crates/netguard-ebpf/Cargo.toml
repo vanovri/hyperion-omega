@@ -1,0 +1,9 @@
+[package]
+name = "netguard-ebpf"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR GPL-2.0-only"
+description = "Aya-compatible #![no_std] Rust eBPF XDP & TC kernel entrypoints for HYPERION NetGuard"
+
+[dependencies]
+netguard-common = { path = "../netguard-common" }

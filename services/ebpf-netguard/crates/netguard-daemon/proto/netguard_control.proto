@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package hyperion.omega.netguard.v1;
+
+// Canonical Channel 16 gRPC Control & Socket Telemetry Interface (Port 50165).
+service NetGuardControl {
+  // Atomically applies a signed Aegis mitigation or CIDR/Account rule in sub-millisecond RCU time.
+  rpc ApplyMitigation(ApplyNetGuardMitigationRequest) returns (ApplyNetGuardMitigationResponse);
+
+  // Atomically revokes an active rule by rollback_token or CIDR/Account target.
+  rpc RevokeMitigation(RevokeNetGuardMitigationRequest) returns (RevokeNetGuardMitigationResponse);
+
+  // Returns live lock-free per-CPU TCP RTT HDR histograms, socket backlog, retransmit spikes & XDP counters.
+  rpc GetTelemetrySnapshot(GetNetGuardTelemetryRequest) returns (NetGuardTelemetrySnapshot);
+
+  // Streams live XDP drop & anomaly telemetry snapshots to Aegis SRE Agent (Channel 06) & Sovereign Studio.
+  rpc StreamSecurityEvents(StreamNetGuardEventsRequest) returns (stream NetGuardSecurityEvent);
+}
+
+message CidrRuleSpec {
+  // IPv4 or IPv6 CIDR string (e.g. "203.0.113.0/24", "198.51.100.42/32", "2001:db8:bad::/48").
+  string cidr = 1;
+  // 1=HARD_DROP, 2=DROP_NEW_SYN_ONLY (graceful conntrack), 3=THROTTLE_RPS, 4=SYN_COOKIE_TX.
+  uint32 rule_action = 2;
+  uint32 rate_override_rps = 3;
+  uint64 duration_ms = 4;
+}
+
+message ApplyNetGuardMitigationRequest {
+  string command_id = 1;
+  string incident_id = 2;
+  // Optional serialized `hyperion.v1.RiskMitigationCommand` protobuf bytes (Ed25519 + Blake3 verified).
+  bytes signed_risk_command_pb = 3;
+  repeated CidrRuleSpec cidr_rules = 4;
+  repeated uint64 target_account_ids = 5;
+  uint32 account_action = 6;
+  uint32 rate_limit_override_rps = 7;
+  uint64 cooldown_duration_ms = 8;
+  bool dry_run = 9;
+  string rollback_token = 10;
+  string reason = 11;
+  bool preserve_established_connections = 12;
+}
+
+message ApplyNetGuardMitigationResponse {
+  bool applied = 1;
+  bool dry_run = 2;
+  uint64 rcu_generation = 3;
+  uint64 apply_latency_ns = 4;
+  string rollback_token = 5;
+  uint32 active_cidr_rules = 6;
+  uint32 active_account_rules = 7;
+  uint64 preserved_established_sessions = 8;
+  string detail = 9;
+}
+
+message RevokeNetGuardMitigationRequest {
+  string rollback_token = 1;
+  repeated string cidrs = 2;
+  repeated uint64 account_ids = 3;
+}
+
+message RevokeNetGuardMitigationResponse {
+  bool revoked = 1;
+  uint64 rcu_generation = 2;
+  uint64 revoke_latency_ns = 3;
+  uint32 remaining_cidr_rules = 4;
+  uint32 remaining_account_rules = 5;
+}
+
+message GetNetGuardTelemetryRequest {
+  string interface_name = 1;
+}
+
+message HdrQuantilesNs {
+  uint64 sample_count = 1;
+  uint64 min_ns = 2;
+  uint64 p50_ns = 3;
+  uint64 p90_ns = 4;
+  uint64 p95_ns = 5;
+  uint64 p99_ns = 6;
+  uint64 p999_ns = 7;
+  uint64 max_ns = 8;
+  uint64 sum_ns = 9;
+}
+
+message DropReasonMetric {
+  string reason = 1;
+  uint64 packets = 2;
+}
+
+message NetGuardTelemetrySnapshot {
+  string interface_name = 1;
+  uint64 snapshot_ts_ns = 2;
+  uint64 rcu_generation = 3;
+  uint64 xdp_pass_packets = 4;
+  uint64 xdp_drop_packets = 5;
+  uint64 xdp_tx_packets = 6;
+  HdrQuantilesNs tcp_rtt_ns = 7;
+  HdrQuantilesNs socket_backlog_depth = 8;
+  uint64 socket_backlog_overflow_drops = 9;
+  uint64 tcp_retransmits_total = 10;
+  uint64 tcp_segments_total = 11;
+  // Retransmission ratio scaled in parts-per-million (1_000_000 = 100%).
+  uint32 retransmit_spike_ratio_ppm = 12;
+  uint32 active_ipv4_cidr_rules = 13;
+  uint32 active_ipv6_cidr_rules = 14;
+  uint32 active_frozen_accounts = 15;
+  uint64 active_conntrack_sessions = 16;
+  repeated DropReasonMetric drop_reasons = 17;
+}
+
+message StreamNetGuardEventsRequest {
+  string interface_name = 1;
+}
+
+message NetGuardSecurityEvent {
+  uint64 event_ts_ns = 1;
+  string event_type = 2;
+  string src_ip = 3;
+  uint32 dst_port = 4;
+  string xdp_action = 5;
+  string drop_reason = 6;
+  uint64 rcu_generation = 7;
+  string summary = 8;
+}
