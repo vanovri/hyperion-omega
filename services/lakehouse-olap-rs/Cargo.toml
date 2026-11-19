@@ -1,0 +1,52 @@
+[package]
+name = "lakehouse-olap-rs"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "HYPERION Channel 17 — Columnar Lakehouse OLAP Engine (Arrow, Zstd Parquet, DataFusion UDFs/UDAFs, ASOF Join, AST Guard & Arrow Flight)"
+
+[dependencies]
+hyperion-omega-proto = { path = "../../proto/omega/gen/rust" }
+arrow = { version = "55.1.0", features = ["ipc", "json", "prettyprint"] }
+arrow-flight = "55.1.0"
+parquet = { version = "55.1.0", features = ["async", "zstd"] }
+datafusion = { version = "48.0.1", default-features = false, features = [
+    "parquet",
+    "datetime_expressions",
+    "math_expressions",
+    "nested_expressions",
+    "string_expressions",
+    "unicode_expressions",
+    "crypto_expressions",
+    "regex_expressions",
+    "recursive_protection",
+] }
+sqlparser = "0.55.0"
+tokio = { version = "1.40", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["net"] }
+futures = "0.3"
+async-trait = "0.1"
+axum = "0.7.9"
+tonic = { version = "0.12.3", features = ["transport", "gzip"] }
+prost = "0.13.5"
+bytes = "1.8"
+blake3 = "1.8"
+crc32c = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+parking_lot = "0.12"
+url = "2.5"
+object_store = "0.12"
+
+[dev-dependencies]
+tempfile = "3.14"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
