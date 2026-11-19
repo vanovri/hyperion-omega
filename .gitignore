@@ -54,6 +54,9 @@ data/snapshots/
 .env.local
 .env.*.local
 
+# Foundry / EVM build cache
+contracts-evm/cache/
+
 # OS & Editor
 .DS_Store
 Thumbs.db

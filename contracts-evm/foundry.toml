@@ -1,0 +1,26 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+solc_version = "0.8.26"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 800
+via_ir = true
+bytecode_hash = "none"
+cbor_metadata = false
+gas_reports = ["HyperionVault", "SolvencyStateAnchor", "CensorshipEscapeHatch", "Groth16BN254SolvencyVerifier"]
+
+[fuzz]
+runs = 1024
+max_test_rejects = 65536
+seed = "0x4859504552494f4e"
+
+[invariant]
+runs = 128
+depth = 48
+fail_on_revert = false
+call_override = false
+show_metrics = true
