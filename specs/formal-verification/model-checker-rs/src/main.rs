@@ -45,12 +45,12 @@ impl Hasher for FxHasher64 {
     fn write(&mut self, bytes: &[u8]) {
         const K: u64 = 0x517cc1b727220a95;
         let mut h = self.hash;
-        let mut chunks = bytes.chunks_exact(8);
-        for c in &mut chunks {
-            let word = u64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]);
+        let (chunks, remainder) = bytes.as_chunks::<8>();
+        for &c in chunks {
+            let word = u64::from_le_bytes(c);
             h = (h.rotate_left(5) ^ word).wrapping_mul(K);
         }
-        for &b in chunks.remainder() {
+        for &b in remainder {
             h = (h.rotate_left(5) ^ (b as u64)).wrapping_mul(K);
         }
         self.hash = h;
@@ -137,6 +137,12 @@ impl NodeState {
         } else {
             self.wal[(self.wal_len - 1) as usize].entry_hash
         }
+    }
+}
+
+impl Default for NodeState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -417,15 +423,15 @@ pub fn check_safety_invariants(parent: &SystemState, next: &SystemState) -> Resu
         next.ghost_committed[g_len - 1].term
     };
     for i in 0..NUM_NODES {
-        if next.nodes[i].role == Role::Leader && next.nodes[i].current_term >= last_committed_term {
-            if (next.nodes[i].wal_len as usize) < g_len
-                || next.nodes[i].wal[..g_len] != next.ghost_committed[..g_len]
-            {
-                return Err(format!(
-                    "INV5_LEADER_COMPLETENESS_VIOLATION: Leader {} in term {} missing committed prefix of len {}",
-                    i, next.nodes[i].current_term, g_len
-                ));
-            }
+        if next.nodes[i].role == Role::Leader
+            && next.nodes[i].current_term >= last_committed_term
+            && ((next.nodes[i].wal_len as usize) < g_len
+                || next.nodes[i].wal[..g_len] != next.ghost_committed[..g_len])
+        {
+            return Err(format!(
+                "INV5_LEADER_COMPLETENESS_VIOLATION: Leader {} in term {} missing committed prefix of len {}",
+                i, next.nodes[i].current_term, g_len
+            ));
         }
     }
 
@@ -672,26 +678,20 @@ pub fn expand_successors(
         .any(|n| n.role == Role::Leader || n.wal_len > 0 || n.current_term > 1);
     if cluster_active && state.faults_used < cfg.max_faults {
         // 6a. Canonical Symmetric Node Isolations & Asymmetric Bridge Cuts (avoids redundant bit-flip permutations)
+        const fn link_bit(src: usize, dst: usize) -> u16 {
+            1u16 << (src * NUM_NODES + dst)
+        }
         let canonical_cuts: [u16; 5] = [
             // Isolate Node 0 symmetrically ({0} <-> {1,2})
-            (1 << (0 * NUM_NODES + 1))
-                | (1 << (1 * NUM_NODES + 0))
-                | (1 << (0 * NUM_NODES + 2))
-                | (1 << (2 * NUM_NODES + 0)),
+            link_bit(0, 1) | link_bit(1, 0) | link_bit(0, 2) | link_bit(2, 0),
             // Isolate Node 1 symmetrically ({1} <-> {0,2})
-            (1 << (1 * NUM_NODES + 0))
-                | (1 << (0 * NUM_NODES + 1))
-                | (1 << (1 * NUM_NODES + 2))
-                | (1 << (2 * NUM_NODES + 1)),
+            link_bit(1, 0) | link_bit(0, 1) | link_bit(1, 2) | link_bit(2, 1),
             // Isolate Node 2 symmetrically ({2} <-> {0,1})
-            (1 << (2 * NUM_NODES + 0))
-                | (1 << (0 * NUM_NODES + 2))
-                | (1 << (2 * NUM_NODES + 1))
-                | (1 << (1 * NUM_NODES + 2)),
+            link_bit(2, 0) | link_bit(0, 2) | link_bit(2, 1) | link_bit(1, 2),
             // Asymmetric triangle cut: 0 -x-> 2 blocked while 0 <-> 1 and 1 <-> 2 open
-            (1 << (0 * NUM_NODES + 2)) | (1 << (2 * NUM_NODES + 0)),
+            link_bit(0, 2) | link_bit(2, 0),
             // Asymmetric unidirectional cut: 0 -x-> 1 blocked while 1 -> 0 open
-            1 << (0 * NUM_NODES + 1),
+            link_bit(0, 1),
         ];
         for cut_mask in canonical_cuts {
             if (state.partition_mask & cut_mask) != cut_mask {
@@ -954,24 +954,24 @@ fn deliver_message(state: &mut SystemState, msg: InFlightMsg, cfg: &ProtocolConf
             if cfg.bug_unconditional_truncate {
                 // Intentional mutant bug: blindly overwrites wal_len even if out-of-order shorter RPC arrives!
                 let mut new_len = prev_log_idx;
-                for k in 0..(entries_len as usize) {
-                    state.nodes[dst].wal[new_len as usize] = entries[k];
+                for &entry in entries.iter().take(entries_len as usize) {
+                    state.nodes[dst].wal[new_len as usize] = entry;
                     new_len += 1;
                 }
                 state.nodes[dst].wal_len = new_len;
             } else {
                 // Canonical Raft §5.3: truncate ONLY if an existing entry conflicts with a new one
-                for k in 0..(entries_len as usize) {
+                for (k, &entry) in entries.iter().enumerate().take(entries_len as usize) {
                     let target_idx = (prev_log_idx as usize) + k;
                     if target_idx < (state.nodes[dst].wal_len as usize) {
-                        if state.nodes[dst].wal[target_idx].term != entries[k].term {
+                        if state.nodes[dst].wal[target_idx].term != entry.term {
                             // Truncate conflicting uncommitted suffix from target_idx onward
                             state.nodes[dst].wal_len = target_idx as u8;
-                            state.nodes[dst].wal[target_idx] = entries[k];
+                            state.nodes[dst].wal[target_idx] = entry;
                             state.nodes[dst].wal_len += 1;
                         }
                     } else if target_idx < MAX_WAL_LEN {
-                        state.nodes[dst].wal[target_idx] = entries[k];
+                        state.nodes[dst].wal[target_idx] = entry;
                         state.nodes[dst].wal_len += 1;
                     }
                 }
@@ -1300,7 +1300,7 @@ pub fn run_bfs_model_checker(cfg: &ProtocolConfig) -> Result<ModelCheckSummary, 
                     && (next.partition_mask != 0
                         || next.nodes.iter().any(|n| n.crashed)
                         || next.ghost_committed_len > 0)
-                    && (visited.len() % 11 == 0)
+                    && visited.len().is_multiple_of(11)
                 {
                     liveness_samples.push(*next);
                 }

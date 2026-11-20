@@ -420,9 +420,8 @@ impl CacheAlignedCompactState {
     #[inline(always)]
     pub fn from_system_state(s: &SystemState) -> Self {
         let mut w = [0_u64; 8];
-        for i in 0..NUM_NODES {
-            let n = &s.nodes[i];
-            w[i] = (n.current_term as u64)
+        for (slot, n) in w.iter_mut().zip(s.nodes.iter()) {
+            *slot = (n.current_term as u64)
                 | ((n.voted_for as u64) << 8)
                 | ((n.wal_len as u64) << 16)
                 | ((n.role as u64) << 24)
