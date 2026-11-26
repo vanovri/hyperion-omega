@@ -638,7 +638,7 @@ pub fn build_and_verify_merkle_sum_solvency(
 
     while level.len() > 1 {
         let mut next = Vec::with_capacity(level.len() / 2);
-        for pair in level.chunks_exact(2) {
+        for pair in level.as_chunks::<2>().0 {
             let (lh, ls) = &pair[0];
             let (rh, rs) = &pair[1];
             if *ls < 0 || *rs < 0 {

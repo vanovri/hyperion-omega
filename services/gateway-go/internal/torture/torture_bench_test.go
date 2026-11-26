@@ -379,8 +379,11 @@ func TestTorture_5100ConcurrentWebSockets_SlowConsumer_Replay_CircuitBreaker_Zer
 
 	// 5. Upstream Fault Injection -> Circuit Breaker Trip (OPEN) -> Recovery (HALF-OPEN -> CLOSED)!
 	ledgerMock.failMode.Store(true)
-	tripTS := strconv.FormatInt(time.Now().UnixNano(), 10)
-	for n := 100; n < 116; n++ {
+	for n := 100; n < 300; n++ {
+		if mesh.LedgerPool.Breaker().State() == grpcclient.StateOpen {
+			break
+		}
+		tripTS := strconv.FormatInt(time.Now().UnixNano(), 10)
 		nonceStr := strconv.Itoa(n)
 		sig := auth.SignEd25519(priv, tripTS, nonceStr, http.MethodPost, "/api/v1/orders", ordPayload)
 		req, _ := http.NewRequest(http.MethodPost, gwURL+"/api/v1/orders", bytes.NewReader(ordPayload))

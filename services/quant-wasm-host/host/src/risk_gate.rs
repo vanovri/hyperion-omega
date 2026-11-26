@@ -369,8 +369,8 @@ impl PreTradeRiskGate {
             }
             // Check if already scheduled for cancel in this tick:
             let mut being_canceled = false;
-            for s_idx in 0..self.staged_len {
-                if let Some(ValidatedOrderAction::Cancel { order_id, .. }) = self.staged[s_idx] {
+            for staged in &self.staged[..self.staged_len] {
+                if let Some(ValidatedOrderAction::Cancel { order_id, .. }) = *staged {
                     if order_id == o.order_id {
                         being_canceled = true;
                         break;
@@ -398,9 +398,8 @@ impl PreTradeRiskGate {
                     return self.reject(RISK_ERR_DUPLICATE_CLIENT_ORDER_ID);
                 }
                 let mut canceled_later = false;
-                for c_idx in (s_idx + 1)..self.staged_len {
-                    if let Some(ValidatedOrderAction::Cancel { order_id, .. }) = self.staged[c_idx]
-                    {
+                for later in &self.staged[(s_idx + 1)..self.staged_len] {
+                    if let Some(ValidatedOrderAction::Cancel { order_id, .. }) = *later {
                         if order_id == staged_oid {
                             canceled_later = true;
                             break;
@@ -479,19 +478,19 @@ impl PreTradeRiskGate {
         }
 
         let mut found_instrument: Option<u32> = None;
-        for i in 0..self.open_len {
-            if self.open_orders[i].order_id == order_id {
-                found_instrument = Some(self.open_orders[i].instrument_id);
+        for order in &self.open_orders[..self.open_len] {
+            if order.order_id == order_id {
+                found_instrument = Some(order.instrument_id);
                 break;
             }
         }
         if found_instrument.is_none() {
-            for s_idx in 0..self.staged_len {
+            for staged in &self.staged[..self.staged_len] {
                 if let Some(ValidatedOrderAction::SubmitLimit {
                     order_id: staged_oid,
                     instrument_id,
                     ..
-                }) = self.staged[s_idx]
+                }) = *staged
                 {
                     if staged_oid == order_id {
                         found_instrument = Some(instrument_id);

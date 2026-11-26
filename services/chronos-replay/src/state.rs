@@ -326,10 +326,8 @@ impl AccountRecord {
         asset: AssetSymbol,
     ) -> Result<&mut AssetBalanceLeaf, ChronosError> {
         let cnt = self.asset_count as usize;
-        for a in &mut self.assets[..cnt] {
-            if a.asset == asset {
-                return Ok(a);
-            }
+        if let Some(idx) = self.assets[..cnt].iter().position(|a| a.asset == asset) {
+            return Ok(&mut self.assets[idx]);
         }
         if cnt >= MAX_INLINE_ASSETS {
             return Err(ChronosError::InvalidArgument(format!(
