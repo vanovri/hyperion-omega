@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: "3.12"
       - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Validate Core & Omega Contracts
         run: |
@@ -108,7 +110,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: bufbuild/buf-setup-action@v1
       - uses: dtolnay/rust-toolchain@stable
       - name: Sovereign Studio Typecheck, Vitest & Next.js Production Build
         working-directory: apps/sovereign-studio
