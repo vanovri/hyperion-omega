@@ -2,9 +2,9 @@
 
 - **Status**: `VERIFIED 100% — OMEGA PHASE II CONTRACT & FORMAL PROOFS LOCKED`
 - **Canonical Monorepo Root**: `C:\Users\ardhy\.gemini\antigravity\scratch\hyperion`
-- **Extends (Backward-Compatible)**: [`.agents/rules/00-hyperion-contract.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/00-hyperion-contract.md) & [`specs/handoffs/ch01-foundation.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/specs/handoffs/ch01-foundation.md) (`79/79` CH01 artifacts verified `0-byte` SHA-256 unchanged; `CH02`–`CH10` handoffs pending wave merge into `main` at CH11 lock time)
-- **OMEGA Governance Rule**: [`.agents/rules/01-hyperion-omega.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/01-hyperion-omega.md)
-- **Overclock Compliance**: [`.agents/rules/02-extreme-overclock-protocol.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/02-extreme-overclock-protocol.md) (`100.00%` Rust Protocol Mutation, `97.22%` Python AST Mutation, `500,000`-cycle `0 B` Rust soak, 3-Pass Micro-Optimization `1,974.10 -> 9.80 ns/op`)
+- **Extends (Backward-Compatible)**: [`.agents/rules/00-hyperion-contract.md`](../../.agents/rules/00-hyperion-contract.md) & [`specs/handoffs/ch01-foundation.md`](ch01-foundation.md) (`79/79` CH01 artifacts verified `0-byte` SHA-256 unchanged; `CH02`–`CH10` handoffs pending wave merge into `main` at CH11 lock time)
+- **OMEGA Governance Rule**: [`.agents/rules/01-hyperion-omega.md`](../../.agents/rules/01-hyperion-omega.md)
+- **Overclock Compliance**: [`.agents/rules/02-extreme-overclock-protocol.md`](../../.agents/rules/02-extreme-overclock-protocol.md) (`100.00%` Rust Protocol Mutation, `97.22%` Python AST Mutation, `500,000`-cycle `0 B` Rust soak, 3-Pass Micro-Optimization `1,974.10 -> 9.80 ns/op`)
 - **Owner**: Channel 11 (Formal Verification Scientist & Chief Protocol Architect)
 
 ---

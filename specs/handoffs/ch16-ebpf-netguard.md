@@ -4,12 +4,12 @@
 - **Canonical Monorepo Root**: `C:\Users\ardhy\.gemini\antigravity\scratch\hyperion`
 - **Locked Service Directory**: `services/ebpf-netguard/` (Standalone Cargo workspace: `netguard-common`, `netguard-ebpf`, `netguard-daemon` + Linux C eBPF source `ebpf-c/` + verified ELF64 `EM_BPF` artifact `artifacts/hyperion_netguard.bpf.o`)
 - **Upstream Contract Alignment**:
-  - [`.agents/rules/00-hyperion-contract.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/00-hyperion-contract.md) (Gateway `:8080`, `hyperion.risk.mitigations.v1`, zero-float invariant)
-  - [`.agents/rules/01-hyperion-omega.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/01-hyperion-omega.md) (CH16 directory lock, gRPC `:50165`, HTTP/Metrics `:8095`, Redpanda `hyperion.omega.netguard.drops.v1`)
-  - [`.agents/rules/02-extreme-overclock-protocol.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/02-extreme-overclock-protocol.md) (`100.00%` Mutation Kill, `500,000`-cycle `0 B` Soak, 3-Pass Micro-Optimization Loop)
-  - [`contracts/ws-binary-protocol.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/contracts/ws-binary-protocol.md) (32-byte Little-Endian frame header `magic = 0x4859`, `version = 0x01`, `reserved = 0x00`)
-  - [`specs/handoffs/ch06-aegis-agent.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/specs/handoffs/ch06-aegis-agent.md) (byte-exact Ed25519 unsigned-Protobuf `RiskMitigationCommand` signing parity with `services/aegis-agent/src/crypto/signer.ts`)
-  - [`specs/handoffs/ch11-formal-omega.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/specs/handoffs/ch11-formal-omega.md)
+  - [`.agents/rules/00-hyperion-contract.md`](../../.agents/rules/00-hyperion-contract.md) (Gateway `:8080`, `hyperion.risk.mitigations.v1`, zero-float invariant)
+  - [`.agents/rules/01-hyperion-omega.md`](../../.agents/rules/01-hyperion-omega.md) (CH16 directory lock, gRPC `:50165`, HTTP/Metrics `:8095`, Redpanda `hyperion.omega.netguard.drops.v1`)
+  - [`.agents/rules/02-extreme-overclock-protocol.md`](../../.agents/rules/02-extreme-overclock-protocol.md) (`100.00%` Mutation Kill, `500,000`-cycle `0 B` Soak, 3-Pass Micro-Optimization Loop)
+  - [`contracts/ws-binary-protocol.md`](../../contracts/ws-binary-protocol.md) (32-byte Little-Endian frame header `magic = 0x4859`, `version = 0x01`, `reserved = 0x00`)
+  - [`specs/handoffs/ch06-aegis-agent.md`](ch06-aegis-agent.md) (byte-exact Ed25519 unsigned-Protobuf `RiskMitigationCommand` signing parity with `services/aegis-agent/src/crypto/signer.ts`)
+  - [`specs/handoffs/ch11-formal-omega.md`](ch11-formal-omega.md)
   - *Note*: At verification time, `specs/handoffs/ch03-gateway-go.md` is completing in sibling worktree `hyperion-ch03`; all Edge Gateway L4/L7 protections strictly adhere to CH01 locked contracts (`:8080` REST + RFC 6455 Binary WS `magic = 0x4859`).
 
 ---

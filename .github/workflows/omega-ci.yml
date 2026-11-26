@@ -35,7 +35,7 @@ jobs:
         if: ${{ github.event.inputs.profile != 'core' }}
         run: |
           pip install z3-solver pytest
-          pytest specs/formal-verification/smt/ -v
+          pytest specs/formal-verification/smt/run_all_smt_proofs.py -v
           cargo test --manifest-path specs/formal-verification/model-checker-rs/Cargo.toml --release
 
   rust-omega-matrix:

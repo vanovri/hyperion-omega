@@ -3,9 +3,9 @@
 - **Channel**: `CH19` (Distinguished Quantitative AI Researcher & Reinforcement Learning Architect)
 - **Exclusive Ownership Lock**: `/services/alpha-evo-py/**` and `/specs/handoffs/ch19-alpha-evo.md`
 - **Governance Contracts**:
-  - [`.agents/rules/00-hyperion-contract.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/00-hyperion-contract.md) (`1e8` fixed-point, `ppm` `1e6` trunc-toward-zero fees, canonical instruments, double-entry conservation, `HYPWAL01` 16B header)
-  - [`.agents/rules/01-hyperion-omega.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/01-hyperion-omega.md) (`HTTP :8098`, `gRPC :50168`, Redpanda `hyperion.omega.alpha.formulas.v1`, Wasmtime `16 MiB` / `50k` fuel / zero-WASI / NaN-canonicalized limits)
-  - [`.agents/rules/02-extreme-overclock-protocol.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/02-extreme-overclock-protocol.md) (`>= 95%` AST mutation kill score, `500,000`-cycle `0 B` steady-state soak, 3-pass micro-optimization benchmark)
+  - [`.agents/rules/00-hyperion-contract.md`](../../.agents/rules/00-hyperion-contract.md) (`1e8` fixed-point, `ppm` `1e6` trunc-toward-zero fees, canonical instruments, double-entry conservation, `HYPWAL01` 16B header)
+  - [`.agents/rules/01-hyperion-omega.md`](../../.agents/rules/01-hyperion-omega.md) (`HTTP :8098`, `gRPC :50168`, Redpanda `hyperion.omega.alpha.formulas.v1`, Wasmtime `16 MiB` / `50k` fuel / zero-WASI / NaN-canonicalized limits)
+  - [`.agents/rules/02-extreme-overclock-protocol.md`](../../.agents/rules/02-extreme-overclock-protocol.md) (`>= 95%` AST mutation kill score, `500,000`-cycle `0 B` steady-state soak, 3-pass micro-optimization benchmark)
 - **Runtime Stack**: Python `3.12.13`, PyTorch `2.15.0+cpu`, NumPy `2.5.4`, SciPy `1.18.1`, Gymnasium `1.4.0`, ONNX `1.23.2`, ONNX Runtime `1.32.0`, FastAPI `0.165.0`, `pytest 9.2.0`, `rustc` (`stable-x86_64-pc-windows-gnu` `wasm32-unknown-unknown`)
 - **Status**: **`VERIFIED 100% — ALL 4 QUANTITATIVE PILLARS, 23/23 PYTEST, REAL WASM/ONNX ARTIFACTS & EXTREME OVERCLOCK GATES GREEN`**
 
@@ -39,49 +39,49 @@ Channel 19 delivers **`services/alpha-evo-py`**, an autonomous institutional qua
 
 | Path | Responsibility |
 |---|---|
-| [`services/alpha-evo-py/pyproject.toml`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/pyproject.toml) | Python `3.12+` package metadata, dependencies (`torch`, `numpy`, `scipy`, `gymnasium`, `onnx`, `onnxruntime`, `fastapi`), CLI entrypoints (`alpha-evo-run`, `alpha-evo-serve`) |
-| [`services/alpha-evo-py/Dockerfile`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/Dockerfile) | Multi-stage root-context (`docker-compose.omega.yml`) Python `3.12-slim` non-root container exposing `:8098` & `:50168` with `/healthz` healthcheck |
-| [`services/alpha-evo-py/README.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/README.md) | Service architecture, runbook, API contracts, and reproducibility instructions |
-| [`services/alpha-evo-py/src/alpha_evo/fixed_point.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/fixed_point.py) | Exact 128-bit split-word vectorized `1e8` notional & `ppm` trunc-toward-zero fee math (`compute_notional_fp_vec`, `compute_fee_fp_vec`, `settle_fill_double_entry_vec`), canonical `BTC/ETH/SOL/HYPE-USDT` specs |
-| [`services/alpha-evo-py/src/alpha_evo/lob_gym/market_generator.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/lob_gym/market_generator.py) | Multi-regime Hawkes/microstructure synthetic L2 dataset generator + `ChronosMicrostructureAdapter` (`HYPWAL01` WAL header & CH04 `MicrostructureMetrics` ingestion) |
-| [`services/alpha-evo-py/src/alpha_evo/lob_gym/env.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/lob_gym/env.py) | `VectorizedLOBEnv` (`B` parallel envs) & `HyperionLOBGymEnv` (Gymnasium API): FIFO queue tracking, amend priority, Post-Only reject, Log-Normal latency ring buffer, Almgren-Chriss impact, competing MM |
-| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/operators.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/gp_alpha/operators.py) | Strictly causal O(N)/sliding-window time-series operators (`ts_rank`, `ts_zscore`, `ts_decay_linear`, `ts_corr`, `ofi_delta`, `microprice_skew`, `signed_sqrt`, `protected_div`) + 64B cache-line aligned allocator `aligned_empty_64` |
-| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/ast_tree.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/gp_alpha/ast_tree.py) | Immutable AST representation, commutative algebraic simplifier, and 3 evaluators: `evaluate_ast_baseline_loop`, `evaluate_ast_vectorized`, `CompiledSSATape.evaluate_in_place` (64B-aligned zero-alloc) |
-| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/engine.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/gp_alpha/engine.py) | `SymbolicAlphaEngine`: Koza Ramped Half-and-Half, tournament selection, elitism, SHA-256 deduplication, crossover, point/hoist/subtree mutation, Parsimony Pressure, non-overlapping net return evaluator |
-| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/rust_wasm_compiler.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/gp_alpha/rust_wasm_compiler.py) | Auto-compiler emitting JSON AST/SSA manifest, standalone `#![no_std]` Rust/Wasm source + direct `rustc --target wasm32-unknown-unknown` binary compilation, and CH15 `hyperion-quant-sdk` drop-in template |
-| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py) | PyTorch `ActorCriticNetwork` with orthogonal initialization and embedded parallel Welford `obs_mean`/`obs_var`/`obs_count` buffers |
-| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/trainer.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/ppo_agent/trainer.py) | Exact `compute_gae`, vectorized Clipped PPO trainer, and OOS institutional baselines (Analytical Avellaneda-Stoikov, Naive Symmetric MM, Static TWAP/Almgren-Chriss) |
-| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/exporter.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/ppo_agent/exporter.py) | ONNX opset-17 exporter with `onnxruntime` parity verification, compact `.npz` matrix saver, and JSON/CSV learning curve emitter |
-| [`services/alpha-evo-py/src/alpha_evo/validation/cross_validation.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/validation/cross_validation.py) | `PurgedWalkForwardCV`, `CombinatorialPurgedCV` (`CPCV`), and `verify_no_label_leakage` assertion engine |
-| [`services/alpha-evo-py/src/alpha_evo/validation/statistics.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/validation/statistics.py) | Bailey & López de Prado `PSR`, `MinTRL`, `M_eff`, `DSR`, and vectorized `(C, S) @ (S, M)` CSCV `PBO` |
-| [`services/alpha-evo-py/src/alpha_evo/pipeline.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/pipeline.py) | Full autonomous research pipeline orchestrator (`alpha-evo-run`) |
-| [`services/alpha-evo-py/src/alpha_evo/benchmark_opt.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/benchmark_opt.py) | 3-Pass Micro-Optimization Benchmark & `500,000`-cycle `tracemalloc` zero-leak soak harness |
-| [`services/alpha-evo-py/src/alpha_evo/mutation_audit.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/mutation_audit.py) | Deterministic Python AST-operator mutation testing engine (`>= 95%` kill gate) |
-| [`services/alpha-evo-py/src/alpha_evo/server.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/server.py) | FastAPI telemetry & Prometheus metrics server on `:8098` for CH15 & CH20 |
+| [`services/alpha-evo-py/pyproject.toml`](../../services/alpha-evo-py/pyproject.toml) | Python `3.12+` package metadata, dependencies (`torch`, `numpy`, `scipy`, `gymnasium`, `onnx`, `onnxruntime`, `fastapi`), CLI entrypoints (`alpha-evo-run`, `alpha-evo-serve`) |
+| [`services/alpha-evo-py/Dockerfile`](../../services/alpha-evo-py/Dockerfile) | Multi-stage root-context (`docker-compose.omega.yml`) Python `3.12-slim` non-root container exposing `:8098` & `:50168` with `/healthz` healthcheck |
+| [`services/alpha-evo-py/README.md`](../../services/alpha-evo-py/README.md) | Service architecture, runbook, API contracts, and reproducibility instructions |
+| [`services/alpha-evo-py/src/alpha_evo/fixed_point.py`](../../services/alpha-evo-py/src/alpha_evo/fixed_point.py) | Exact 128-bit split-word vectorized `1e8` notional & `ppm` trunc-toward-zero fee math (`compute_notional_fp_vec`, `compute_fee_fp_vec`, `settle_fill_double_entry_vec`), canonical `BTC/ETH/SOL/HYPE-USDT` specs |
+| [`services/alpha-evo-py/src/alpha_evo/lob_gym/market_generator.py`](../../services/alpha-evo-py/src/alpha_evo/lob_gym/market_generator.py) | Multi-regime Hawkes/microstructure synthetic L2 dataset generator + `ChronosMicrostructureAdapter` (`HYPWAL01` WAL header & CH04 `MicrostructureMetrics` ingestion) |
+| [`services/alpha-evo-py/src/alpha_evo/lob_gym/env.py`](../../services/alpha-evo-py/src/alpha_evo/lob_gym/env.py) | `VectorizedLOBEnv` (`B` parallel envs) & `HyperionLOBGymEnv` (Gymnasium API): FIFO queue tracking, amend priority, Post-Only reject, Log-Normal latency ring buffer, Almgren-Chriss impact, competing MM |
+| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/operators.py`](../../services/alpha-evo-py/src/alpha_evo/gp_alpha/operators.py) | Strictly causal O(N)/sliding-window time-series operators (`ts_rank`, `ts_zscore`, `ts_decay_linear`, `ts_corr`, `ofi_delta`, `microprice_skew`, `signed_sqrt`, `protected_div`) + 64B cache-line aligned allocator `aligned_empty_64` |
+| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/ast_tree.py`](../../services/alpha-evo-py/src/alpha_evo/gp_alpha/ast_tree.py) | Immutable AST representation, commutative algebraic simplifier, and 3 evaluators: `evaluate_ast_baseline_loop`, `evaluate_ast_vectorized`, `CompiledSSATape.evaluate_in_place` (64B-aligned zero-alloc) |
+| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/engine.py`](../../services/alpha-evo-py/src/alpha_evo/gp_alpha/engine.py) | `SymbolicAlphaEngine`: Koza Ramped Half-and-Half, tournament selection, elitism, SHA-256 deduplication, crossover, point/hoist/subtree mutation, Parsimony Pressure, non-overlapping net return evaluator |
+| [`services/alpha-evo-py/src/alpha_evo/gp_alpha/rust_wasm_compiler.py`](../../services/alpha-evo-py/src/alpha_evo/gp_alpha/rust_wasm_compiler.py) | Auto-compiler emitting JSON AST/SSA manifest, standalone `#![no_std]` Rust/Wasm source + direct `rustc --target wasm32-unknown-unknown` binary compilation, and CH15 `hyperion-quant-sdk` drop-in template |
+| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py`](../../services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py) | PyTorch `ActorCriticNetwork` with orthogonal initialization and embedded parallel Welford `obs_mean`/`obs_var`/`obs_count` buffers |
+| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/trainer.py`](../../services/alpha-evo-py/src/alpha_evo/ppo_agent/trainer.py) | Exact `compute_gae`, vectorized Clipped PPO trainer, and OOS institutional baselines (Analytical Avellaneda-Stoikov, Naive Symmetric MM, Static TWAP/Almgren-Chriss) |
+| [`services/alpha-evo-py/src/alpha_evo/ppo_agent/exporter.py`](../../services/alpha-evo-py/src/alpha_evo/ppo_agent/exporter.py) | ONNX opset-17 exporter with `onnxruntime` parity verification, compact `.npz` matrix saver, and JSON/CSV learning curve emitter |
+| [`services/alpha-evo-py/src/alpha_evo/validation/cross_validation.py`](../../services/alpha-evo-py/src/alpha_evo/validation/cross_validation.py) | `PurgedWalkForwardCV`, `CombinatorialPurgedCV` (`CPCV`), and `verify_no_label_leakage` assertion engine |
+| [`services/alpha-evo-py/src/alpha_evo/validation/statistics.py`](../../services/alpha-evo-py/src/alpha_evo/validation/statistics.py) | Bailey & López de Prado `PSR`, `MinTRL`, `M_eff`, `DSR`, and vectorized `(C, S) @ (S, M)` CSCV `PBO` |
+| [`services/alpha-evo-py/src/alpha_evo/pipeline.py`](../../services/alpha-evo-py/src/alpha_evo/pipeline.py) | Full autonomous research pipeline orchestrator (`alpha-evo-run`) |
+| [`services/alpha-evo-py/src/alpha_evo/benchmark_opt.py`](../../services/alpha-evo-py/src/alpha_evo/benchmark_opt.py) | 3-Pass Micro-Optimization Benchmark & `500,000`-cycle `tracemalloc` zero-leak soak harness |
+| [`services/alpha-evo-py/src/alpha_evo/mutation_audit.py`](../../services/alpha-evo-py/src/alpha_evo/mutation_audit.py) | Deterministic Python AST-operator mutation testing engine (`>= 95%` kill gate) |
+| [`services/alpha-evo-py/src/alpha_evo/server.py`](../../services/alpha-evo-py/src/alpha_evo/server.py) | FastAPI telemetry & Prometheus metrics server on `:8098` for CH15 & CH20 |
 | `services/alpha-evo-py/tests/test_*.py` (`7` suites) | `test_fixed_point_and_fees.py`, `test_lob_queue_and_latency.py`, `test_gp_operators_and_ast.py`, `test_ppo_and_onnx.py`, `test_validation_dsr_pbo.py`, `test_mutation_audit.py`, `test_server_api.py` (`23/23` passed) |
 
 ### 2.2 Generated Model, Wasm, & Validation Artifacts (`/services/alpha-evo-py/artifacts`)
 
 | Artifact File | Size (Bytes) | Description |
 |---|---:|---|
-| [`best_alpha_ast.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/best_alpha_ast.json) | `3,363` | Winning GP symbolic AST tree, 6-register SSA bytecode, complexity metadata, and DSR/PBO validation certificate |
-| [`redpanda_alpha_formula_event.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/redpanda_alpha_formula_event.json) | `3,833` | Canonical Redpanda event payload for topic `hyperion.omega.alpha.formulas.v1` (key `gen:11`) |
-| [`generated_alpha_strategy.rs`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_strategy.rs) | `13,053` | Standalone `#![no_std]` zero-heap Rust/Wasm guest strategy implementing the evolved SSA tape & `hyperion_host` ABI |
-| [`generated_alpha_strategy.wasm`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_strategy.wasm) | `623,224` | Compiled `wasm32-unknown-unknown` binary (`\x00asm` magic verified, zero WASI syscalls, `< 16 MiB` limit) |
-| [`generated_alpha_ch15_sdk.rs`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_ch15_sdk.rs) | `10,477` | Drop-in Channel 15 `hyperion_quant_sdk::QuantStrategy` + `export_quant_strategy!` integer fixed-point strategy template |
-| [`dsr_pbo_evaluation.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/dsr_pbo_evaluation.json) | `13,295` | Full 5-fold Purged/Embargoed WF-CV report, DSR, CSCV PBO, Top-8 Hall-of-Fame DSR table, and 12-generation GP evolution log |
-| [`ppo_execution_agent.onnx`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_execution_agent.onnx) | `44,941` | Self-contained ONNX opset-17 inference graph (`obs: [B, 14] -> action: [B, 4], value: [B, 1]`) with embedded Welford normalizer |
-| [`ppo_weights_compact.npz`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_weights_compact.npz) | `63,548` | Compact `float32` parameter tensors + Welford statistics for dependency-free inference |
-| [`ppo_learning_curve.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_learning_curve.json) | `16,195` | Full 36-iteration PPO/GAE learning curve, ONNX parity verification report, and 4-strategy OOS execution benchmarks |
-| [`ppo_learning_curve.csv`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_learning_curve.csv) | `3,240` | Tabular CSV export of all 36 PPO training iterations for Sovereign Studio plotting |
-| [`optimization_benchmark.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/optimization_benchmark.json) | `1,654` | Gate 2 (`500,000`-cycle `0 B` soak) and Gate 3 (3-pass micro-optimization benchmark) telemetry |
-| [`mutation_audit.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/mutation_audit.json) | `1,844` | Gate 1 AST mutation audit report (`205/213 = 96.24%` killed across 4 core math modules) |
+| [`best_alpha_ast.json`](../../services/alpha-evo-py/artifacts/best_alpha_ast.json) | `3,363` | Winning GP symbolic AST tree, 6-register SSA bytecode, complexity metadata, and DSR/PBO validation certificate |
+| [`redpanda_alpha_formula_event.json`](../../services/alpha-evo-py/artifacts/redpanda_alpha_formula_event.json) | `3,833` | Canonical Redpanda event payload for topic `hyperion.omega.alpha.formulas.v1` (key `gen:11`) |
+| [`generated_alpha_strategy.rs`](../../services/alpha-evo-py/artifacts/generated_alpha_strategy.rs) | `13,053` | Standalone `#![no_std]` zero-heap Rust/Wasm guest strategy implementing the evolved SSA tape & `hyperion_host` ABI |
+| [`generated_alpha_strategy.wasm`](../../services/alpha-evo-py/artifacts/generated_alpha_strategy.wasm) | `623,224` | Compiled `wasm32-unknown-unknown` binary (`\x00asm` magic verified, zero WASI syscalls, `< 16 MiB` limit) |
+| [`generated_alpha_ch15_sdk.rs`](../../services/alpha-evo-py/artifacts/generated_alpha_ch15_sdk.rs) | `10,477` | Drop-in Channel 15 `hyperion_quant_sdk::QuantStrategy` + `export_quant_strategy!` integer fixed-point strategy template |
+| [`dsr_pbo_evaluation.json`](../../services/alpha-evo-py/artifacts/dsr_pbo_evaluation.json) | `13,295` | Full 5-fold Purged/Embargoed WF-CV report, DSR, CSCV PBO, Top-8 Hall-of-Fame DSR table, and 12-generation GP evolution log |
+| [`ppo_execution_agent.onnx`](../../services/alpha-evo-py/artifacts/ppo_execution_agent.onnx) | `44,941` | Self-contained ONNX opset-17 inference graph (`obs: [B, 14] -> action: [B, 4], value: [B, 1]`) with embedded Welford normalizer |
+| [`ppo_weights_compact.npz`](../../services/alpha-evo-py/artifacts/ppo_weights_compact.npz) | `63,548` | Compact `float32` parameter tensors + Welford statistics for dependency-free inference |
+| [`ppo_learning_curve.json`](../../services/alpha-evo-py/artifacts/ppo_learning_curve.json) | `16,195` | Full 36-iteration PPO/GAE learning curve, ONNX parity verification report, and 4-strategy OOS execution benchmarks |
+| [`ppo_learning_curve.csv`](../../services/alpha-evo-py/artifacts/ppo_learning_curve.csv) | `3,240` | Tabular CSV export of all 36 PPO training iterations for Sovereign Studio plotting |
+| [`optimization_benchmark.json`](../../services/alpha-evo-py/artifacts/optimization_benchmark.json) | `1,654` | Gate 2 (`500,000`-cycle `0 B` soak) and Gate 3 (3-pass micro-optimization benchmark) telemetry |
+| [`mutation_audit.json`](../../services/alpha-evo-py/artifacts/mutation_audit.json) | `1,844` | Gate 1 AST mutation audit report (`205/213 = 96.24%` killed across 4 core math modules) |
 
 ---
 
 ## 3. Pillar 1 — Vectorized LOB Gym & Realistic Execution Simulator
 
-Implemented in [`lob_gym/env.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/lob_gym/env.py) and [`fixed_point.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/fixed_point.py):
+Implemented in [`lob_gym/env.py`](../../services/alpha-evo-py/src/alpha_evo/lob_gym/env.py) and [`fixed_point.py`](../../services/alpha-evo-py/src/alpha_evo/fixed_point.py):
 
 - **Anti-Cheat Execution Microstructure**:
   - **FIFO Queue Position (`queue_ahead_fp`)**: Every newly placed resting maker quote joins behind all resting depth at its price tick (`queue_ahead_fp = level_resting_qty_fp`). Aggressive order flow depletes `queue_ahead_fp` first; the agent fills only the spillover $\max(0, V_{\text{aggr}} - Q_{\text{ahead}})$. Passive cancellations deplete front-of-queue proportionally.
@@ -132,11 +132,11 @@ Discovery split: first `38%` of `28,000` `BTC-USDT` `100ms` ticks minus `10`-bar
 
 ### 4.3 Automated Rust/WebAssembly & Channel 15 Handoff Compilation
 
-- **Standalone Wasm Binary ([`generated_alpha_strategy.wasm`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_strategy.wasm))**:
-  - Compiled directly via `rustc --target wasm32-unknown-unknown` from [`generated_alpha_strategy.rs`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_strategy.rs).
+- **Standalone Wasm Binary ([`generated_alpha_strategy.wasm`](../../services/alpha-evo-py/artifacts/generated_alpha_strategy.wasm))**:
+  - Compiled directly via `rustc --target wasm32-unknown-unknown` from [`generated_alpha_strategy.rs`](../../services/alpha-evo-py/artifacts/generated_alpha_strategy.rs).
   - Binary size: **`623,224` bytes** (`< 16 MiB` Wasmtime sandbox limit), `\x00asm` header verified `true`.
   - `#![no_std]`, zero heap allocation, zero WASI ambient imports, deterministic Newton-Raphson `sqrt_f64` & Padé `[3/2]` `tanh_approx`, explicit `NaN -> 0.0` canonicalization, exports `on_init`, `on_book_l2_tick`, `on_trade_tick`, `on_order_fill`, imports `hyperion_host::{submit_limit_order, cancel_order}`.
-- **Drop-In Channel 15 SDK Strategy ([`generated_alpha_ch15_sdk.rs`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/generated_alpha_ch15_sdk.rs))**:
+- **Drop-In Channel 15 SDK Strategy ([`generated_alpha_ch15_sdk.rs`](../../services/alpha-evo-py/artifacts/generated_alpha_ch15_sdk.rs))**:
   - Implements `hyperion_quant_sdk::QuantStrategy` (`EvoSymbolicAlphaSdkBot`) with `export_quant_strategy!`, pure `i64`/`i128` `PPM_SCALE` fixed-point execution (zero floating-point ABI), `ORDER_TYPE_POST_ONLY` submission, and `export_state`/`import_state` serialization for zero-downtime hot-swaps inside `services/quant-wasm-host`.
 
 ---
@@ -145,7 +145,7 @@ Discovery split: first `38%` of `28,000` `BTC-USDT` `100ms` ticks minus `10`-bar
 
 ### 5.1 Architecture, Objective & Training Hyperparameters
 
-- **Network ([`ppo_agent/network.py`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py))**: Dual-trunk orthogonal-initialized MLP (`Actor: 14 -> 64 (Tanh) -> 64 (Tanh) -> 4 (gain=0.01) + Tanh squash`; `Critic: 14 -> 64 (Tanh) -> 64 (Tanh) -> 1 (gain=1.0)`) with embedded `nn.Module` Welford running normalizer buffers (`obs_mean`, `obs_var`, `obs_count`) so inference has zero external feature-scaling drift.
+- **Network ([`ppo_agent/network.py`](../../services/alpha-evo-py/src/alpha_evo/ppo_agent/network.py))**: Dual-trunk orthogonal-initialized MLP (`Actor: 14 -> 64 (Tanh) -> 64 (Tanh) -> 4 (gain=0.01) + Tanh squash`; `Critic: 14 -> 64 (Tanh) -> 64 (Tanh) -> 1 (gain=1.0)`) with embedded `nn.Module` Welford running normalizer buffers (`obs_mean`, `obs_var`, `obs_count`) so inference has zero external feature-scaling drift.
 - **Coupled Objective**: Maximizes realistic mark-to-market spread capture net of exact Channel 02 maker/taker fees and Almgren-Chriss impact while minimizing quadratic inventory holding risk ($\gamma_{\text{inv}} = 0.22$), terminal inventory penalty ($\kappa = 0.45$), and convex tail-drawdown violation beyond `\$1.50` ($\lambda_{\text{dd}} = 0.35$).
 - **PPO + GAE Config**: `num_envs = 64`, `rollout_steps = 128`, `n_iterations = 36` (`294,912` total env steps), `ppo_epochs = 4`, `minibatch_size = 1,024`, `lr = 2.5e-3`, $\gamma = 0.992$, $\lambda_{\text{GAE}} = 0.95$, $\epsilon_{\text{clip}} = 0.20$, `vf_coef = 0.50`, `ent_coef = 0.006`, `max_grad_norm = 0.50`, `target_kl = 0.03`. Total CPU wall time: **`211.278 s`**.
 
@@ -165,7 +165,7 @@ Discovery split: first `38%` of `28,000` `BTC-USDT` `100ms` ticks minus `10`-bar
 | `35` | `286,720` | `-1.741` | `+6.835` | `3.259` | `0.027` | `1.220` | `-0.00062` | `1.69` | `3.103` | `0.00477` | **`0.8181`** |
 | `36` | `294,912` | **`-0.806`** | **`+6.873`** | `3.189` | **`0.000`** | **`0.983`** | `-0.00634` | `1.45` | `3.104` | `0.00486` | `0.7879` |
 
-*(Complete 36-iteration series stored in [`ppo_learning_curve.csv`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_learning_curve.csv) & [`ppo_learning_curve.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_learning_curve.json).)*
+*(Complete 36-iteration series stored in [`ppo_learning_curve.csv`](../../services/alpha-evo-py/artifacts/ppo_learning_curve.csv) & [`ppo_learning_curve.json`](../../services/alpha-evo-py/artifacts/ppo_learning_curve.json).)*
 
 ### 5.3 Head-to-Head Out-of-Sample Execution Benchmark
 
@@ -182,8 +182,8 @@ Evaluated on fresh unseen market seeds inside `VectorizedLOBEnv` with identical 
 
 | Artifact | Format / Opset | Size (Bytes) | Numerical Parity vs. PyTorch (`onnxruntime`) | Status |
 |---|---|---:|---|---|
-| [`ppo_execution_agent.onnx`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_execution_agent.onnx) | ONNX Opset `17` | `44,941` | `max_action_abs_diff = 1.4901e-07`, `max_value_abs_diff = 1.9073e-06` | **VERIFIED** |
-| [`ppo_weights_compact.npz`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/ppo_weights_compact.npz) | NumPy `.npz` (`float32`) | `63,548` | Exact bit-identical tensor extraction (`actor_net`, `critic_net`, `obs_mean`, `obs_var`) | **VERIFIED** |
+| [`ppo_execution_agent.onnx`](../../services/alpha-evo-py/artifacts/ppo_execution_agent.onnx) | ONNX Opset `17` | `44,941` | `max_action_abs_diff = 1.4901e-07`, `max_value_abs_diff = 1.9073e-06` | **VERIFIED** |
+| [`ppo_weights_compact.npz`](../../services/alpha-evo-py/artifacts/ppo_weights_compact.npz) | NumPy `.npz` (`float32`) | `63,548` | Exact bit-identical tensor extraction (`actor_net`, `critic_net`, `obs_mean`, `obs_var`) | **VERIFIED** |
 
 ---
 
@@ -241,7 +241,7 @@ Evaluated on fresh unseen market seeds inside `VectorizedLOBEnv` with identical 
 
 ### 7.1 Gate 1 — Targeted AST Mutation Testing (`>= 95.0%` Mandatory)
 
-Executed via `alpha_evo.mutation_audit` (in-memory AST operator mutations covering arithmetic, comparison, sign, and numerical guards across all 4 core quantitative modules; verified in `tests/test_mutation_audit.py` and logged in [`mutation_audit.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/mutation_audit.json)):
+Executed via `alpha_evo.mutation_audit` (in-memory AST operator mutations covering arithmetic, comparison, sign, and numerical guards across all 4 core quantitative modules; verified in `tests/test_mutation_audit.py` and logged in [`mutation_audit.json`](../../services/alpha-evo-py/artifacts/mutation_audit.json)):
 
 | Target Module | Killed Mutants | Total Mutants | Kill Score | Status |
 |---|---:|---:|---:|---|
@@ -255,7 +255,7 @@ Executed via `alpha_evo.mutation_audit` (in-memory AST operator mutations coveri
 
 ### 7.2 Gate 2 — `500,000`-Cycle Consecutive Zero-Leak `tracemalloc` Soak
 
-Executed via `alpha_evo.benchmark_opt.run_500k_zero_leak_soak` ([`optimization_benchmark.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/optimization_benchmark.json)):
+Executed via `alpha_evo.benchmark_opt.run_500k_zero_leak_soak` ([`optimization_benchmark.json`](../../services/alpha-evo-py/artifacts/optimization_benchmark.json)):
 
 | Metric | Measured Value | Gate | Verdict |
 |---|---:|---|---|
@@ -268,7 +268,7 @@ Executed via `alpha_evo.benchmark_opt.run_500k_zero_leak_soak` ([`optimization_b
 
 ### 7.3 Gate 3 — 3-Pass Hot-Path Micro-Optimization Benchmark
 
-Evaluated on the winning 6-node GP formula over `4,096` ticks/batch (`max_numerical_parity_error = 0.0`, 64-byte cache-line alignment `register_base_addr_mod_64 == 0`, [`optimization_benchmark.json`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/services/alpha-evo-py/artifacts/optimization_benchmark.json)):
+Evaluated on the winning 6-node GP formula over `4,096` ticks/batch (`max_numerical_parity_error = 0.0`, 64-byte cache-line alignment `register_base_addr_mod_64 == 0`, [`optimization_benchmark.json`](../../services/alpha-evo-py/artifacts/optimization_benchmark.json)):
 
 | Pass | Execution Architecture | `p50` (ns/tick) | `p99` (ns/tick) | Mean Batch (µs) | Peak Temp (Bytes) | Memory (`B/tick`) | Retained After Op | Speedup vs. Pass 1 (`p50`) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|

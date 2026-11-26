@@ -402,11 +402,11 @@ func TestTorture_5100ConcurrentWebSockets_SlowConsumer_Replay_CircuitBreaker_Zer
 		t.Fatalf("expected LedgerPool circuit breaker OPEN under chaos outage, got %s", mesh.LedgerPool.Breaker().State())
 	}
 
-	// Wait for 150ms breaker cooldown, restore ledgerMock, and verify automatic Half-Open -> Closed recovery!
-	time.Sleep(200 * time.Millisecond)
+	// Restore ledgerMock, wait for 150ms breaker cooldown, and verify automatic Half-Open -> Closed recovery!
 	ledgerMock.failMode.Store(false)
+	time.Sleep(220 * time.Millisecond)
 	freshTS := strconv.FormatInt(time.Now().UnixNano(), 10)
-	for n := 200; n < 205; n++ {
+	for n := 1000; n < 1005; n++ {
 		nonceStr := strconv.Itoa(n)
 		sig := auth.SignEd25519(priv, freshTS, nonceStr, http.MethodPost, "/api/v1/orders", ordPayload)
 		req, _ := http.NewRequest(http.MethodPost, gwURL+"/api/v1/orders", bytes.NewReader(ordPayload))

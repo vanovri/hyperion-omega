@@ -5,11 +5,11 @@
   - Service Crate: `/services/consensus-raft-rs/**` (`services/consensus-raft-rs/Cargo.toml`, `build.rs`, `Dockerfile`, `src/**`, `tests/**`, `benches/**`)
   - Handoff Document: `specs/handoffs/ch12-consensus-raft.md`
 - **Upstream Governance & Contracts**:
-  - [`.agents/rules/00-hyperion-contract.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/00-hyperion-contract.md) (Fixed-Point `1e8`, Double-Entry Conservation, `HYPWAL01`/`HYPSNP01` Wire Spec)
-  - [`.agents/rules/01-hyperion-omega.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/01-hyperion-omega.md) (`CH12` Port Matrix, `hyperion.omega.v1`, PreVote + Blake3 WAL + ReadIndex Invariants)
-  - [`.agents/rules/02-extreme-overclock-protocol.md`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/.agents/rules/02-extreme-overclock-protocol.md) (`>= 95%` Mutation Survival Zero, `500,000`-Cycle Zero-Leak Soak, 3-Pass Micro-Optimization Loop)
-  - [`proto/omega/consensus.proto`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/proto/omega/consensus.proto) (`hyperion.omega.v1.RaftConsensusService`)
-  - [`specs/formal-verification/tlaplus/HyperionOmegaRaftL2.tla`](file:///C:/Users/ardhy/.gemini/antigravity/scratch/hyperion/specs/formal-verification/tlaplus/HyperionOmegaRaftL2.tla) (CH11 TLA+ Formal Safety & Liveness Invariants)
+  - [`.agents/rules/00-hyperion-contract.md`](../../.agents/rules/00-hyperion-contract.md) (Fixed-Point `1e8`, Double-Entry Conservation, `HYPWAL01`/`HYPSNP01` Wire Spec)
+  - [`.agents/rules/01-hyperion-omega.md`](../../.agents/rules/01-hyperion-omega.md) (`CH12` Port Matrix, `hyperion.omega.v1`, PreVote + Blake3 WAL + ReadIndex Invariants)
+  - [`.agents/rules/02-extreme-overclock-protocol.md`](../../.agents/rules/02-extreme-overclock-protocol.md) (`>= 95%` Mutation Survival Zero, `500,000`-Cycle Zero-Leak Soak, 3-Pass Micro-Optimization Loop)
+  - [`proto/omega/consensus.proto`](../../proto/omega/consensus.proto) (`hyperion.omega.v1.RaftConsensusService`)
+  - [`specs/formal-verification/tlaplus/HyperionOmegaRaftL2.tla`](../formal-verification/tlaplus/HyperionOmegaRaftL2.tla) (CH11 TLA+ Formal Safety & Liveness Invariants)
 - **Safety Guarantees**: `#![forbid(unsafe_code)]`, `#![deny(clippy::float_arithmetic)]`, **0** third-party Raft libraries (protocol state machine authored 100% from scratch in pure Rust).
 
 ---

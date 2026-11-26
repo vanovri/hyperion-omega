@@ -73,12 +73,12 @@ fn main() {
 
     let iters = 400_000usize;
     let p1 = measure_pass("Pass 1: Baseline (String + Vec Clone)", iters, 64, 2, |i| {
-        let px = 68_425_50000000u64.wrapping_add(i & 0xFF);
+        let px = 6_842_550_000_000_u64.wrapping_add(i & 0xFF);
         let qty = 25_000_000u64.wrapping_add(i & 0x3F);
         hotpath_pass1_baseline(black_box(px), black_box(qty), black_box(250), black_box(&hdr))
     });
     let p2 = measure_pass("Pass 2: Zero-Copy Slice Refactor", iters, 0, 0, |i| {
-        let px = 68_425_50000000u64.wrapping_add(i & 0xFF);
+        let px = 6_842_550_000_000_u64.wrapping_add(i & 0xFF);
         let qty = 25_000_000u64.wrapping_add(i & 0x3F);
         hotpath_pass2_zerocopy(black_box(px), black_box(qty), black_box(250), black_box(&hdr))
     });
@@ -88,7 +88,7 @@ fn main() {
         0,
         0,
         |i| {
-            let px = 68_425_50000000u64.wrapping_add(i & 0xFF);
+            let px = 6_842_550_000_000_u64.wrapping_add(i & 0xFF);
             let qty = 25_000_000u64.wrapping_add(i & 0x3F);
             hotpath_pass3_cache_aligned(
                 black_box(&mut acc),
