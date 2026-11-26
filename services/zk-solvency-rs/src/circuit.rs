@@ -231,8 +231,8 @@ impl<const DEPTH: usize> ConstraintSynthesizer<Fr> for MsstInclusionSolvencyCirc
 
         // 4. CLAIM (b): Binary Path Sum Integrity & Poseidon Merkle Rollup (Levels `0..DEPTH`).
         let domain_node = FpVar::constant(Fr::from(DOMAIN_MSST_NODE));
-        for level in 0..DEPTH {
-            let step = self.path[level].ok_or(SynthesisError::AssignmentMissing)?;
+        for (level, step_opt) in self.path.iter().enumerate().take(DEPTH) {
+            let step = step_opt.ok_or(SynthesisError::AssignmentMissing)?;
             let sibling_hash = FpVar::new_witness(cs.clone(), || Ok(step.sibling_hash))?;
             let sibling_sum = FpVar::new_witness(cs.clone(), || Ok(step.sibling_sum))?;
             let is_right = Boolean::new_witness(cs.clone(), || Ok(step.is_right_child))?;

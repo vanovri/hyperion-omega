@@ -406,8 +406,8 @@ impl StateCommitmentTree {
         let mut acc: Option<[u8; 32]> = None;
         let pow2 = self.exec_leaf_count.next_power_of_two();
         let target_bits = pow2.trailing_zeros() as usize;
-        for h in 0..target_bits {
-            if let Some(peak) = self.exec_frontier[h] {
+        for peak_opt in self.exec_frontier.iter().take(target_bits) {
+            if let Some(peak) = *peak_opt {
                 acc = Some(match acc {
                     None => hash_merkle_branch(&peak, &empty_at_height),
                     Some(right_sub) => hash_merkle_branch(&peak, &right_sub),

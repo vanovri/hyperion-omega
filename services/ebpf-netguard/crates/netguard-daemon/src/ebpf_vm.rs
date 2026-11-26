@@ -491,9 +491,7 @@ impl BpfStaticVerifier {
                             let mut next = cur;
                             next.regs[0] = RegType::Scalar;
                             // R1..R5 are caller-saved scratch registers per eBPF ABI
-                            for scratch in 1..=5 {
-                                next.regs[scratch] = RegType::Uninitialized;
-                            }
+                            next.regs[1..=5].fill(RegType::Uninitialized);
                             if pc + 1 >= len {
                                 return Err(VerifierError::FallthroughExit { pc });
                             }

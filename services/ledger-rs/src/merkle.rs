@@ -334,9 +334,9 @@ impl AccountBucket {
             return;
         }
         let n = self.inline_len as usize;
-        for i in 0..n {
-            if self.inline[i].0 == account_id {
-                self.inline[i].1 = leaf_hash;
+        for entry in &mut self.inline[..n] {
+            if entry.0 == account_id {
+                entry.1 = leaf_hash;
                 return;
             }
         }
@@ -487,10 +487,10 @@ impl IncrementalMerkleState {
         self.exec_total_count += 1;
         let mut carry = fill_leaf_hash;
         let mut landed_h = 0usize;
-        for h in 0..32 {
-            match self.exec_frontier[h].take() {
+        for (h, slot) in self.exec_frontier.iter_mut().enumerate() {
+            match slot.take() {
                 None => {
-                    self.exec_frontier[h] = Some(carry);
+                    *slot = Some(carry);
                     landed_h = h;
                     break;
                 }

@@ -84,8 +84,7 @@ impl AlignedQuorumTracker {
             return 0;
         }
         let mut buf = [0u64; MAX_CLUSTER_VOTERS];
-        for i in 0..n {
-            let m = self.match_indices[i];
+        for (i, &m) in self.match_indices.iter().enumerate().take(n) {
             let mut pos = i;
             while pos > 0 && buf[pos - 1] < m {
                 buf[pos] = buf[pos - 1];

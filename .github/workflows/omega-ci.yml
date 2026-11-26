@@ -28,7 +28,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Validate Core & Omega Contracts
         run: |
-          pip install --quiet sqlparse
+          pip install --quiet sqlparse pyyaml
           python scripts/validate_contracts.py
       - name: Run Z3 SMT Formal Proofs & Explicit-State Model Checker
         if: ${{ github.event.inputs.profile != 'core' }}
@@ -66,7 +66,10 @@ jobs:
           components: clippy
       - name: Clippy & Release Test Suite
         run: |
-          if [ -f "${{ matrix.crate }}/Cargo.toml" ]; then
+          if [ "${{ matrix.crate }}" = "services/quant-wasm-host" ]; then
+            cargo clippy --manifest-path "${{ matrix.crate }}/Cargo.toml" -p hyperion-quant-abi -p hyperion-quant-sdk -p quant-wasm-host --all-targets -- -D warnings
+            cargo test --manifest-path "${{ matrix.crate }}/Cargo.toml" -p hyperion-quant-abi -p hyperion-quant-sdk -p quant-wasm-host --release
+          elif [ -f "${{ matrix.crate }}/Cargo.toml" ]; then
             cargo clippy --manifest-path "${{ matrix.crate }}/Cargo.toml" --all-targets -- -D warnings
             cargo test --manifest-path "${{ matrix.crate }}/Cargo.toml" --release
           fi

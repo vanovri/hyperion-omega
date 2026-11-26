@@ -312,9 +312,9 @@ impl AccountRecord {
     #[inline]
     pub fn get_asset(&self, asset: AssetSymbol) -> (i128, i128) {
         let cnt = self.asset_count as usize;
-        for i in 0..cnt {
-            if self.assets[i].asset == asset {
-                return (self.assets[i].available_fp, self.assets[i].locked_fp);
+        for a in &self.assets[..cnt] {
+            if a.asset == asset {
+                return (a.available_fp, a.locked_fp);
             }
         }
         (0, 0)
@@ -326,9 +326,9 @@ impl AccountRecord {
         asset: AssetSymbol,
     ) -> Result<&mut AssetBalanceLeaf, ChronosError> {
         let cnt = self.asset_count as usize;
-        for i in 0..cnt {
-            if self.assets[i].asset == asset {
-                return Ok(&mut self.assets[i]);
+        for a in &mut self.assets[..cnt] {
+            if a.asset == asset {
+                return Ok(a);
             }
         }
         if cnt >= MAX_INLINE_ASSETS {
@@ -339,8 +339,8 @@ impl AccountRecord {
         }
         // Keep assets sorted lexicographically so `hash_account_leaf` is always canonical without allocating!
         let mut insert_pos = cnt;
-        for i in 0..cnt {
-            if asset < self.assets[i].asset {
+        for (i, a) in self.assets.iter().enumerate().take(cnt) {
+            if asset < a.asset {
                 insert_pos = i;
                 break;
             }

@@ -61,10 +61,10 @@ pub fn sha256_digest(data: &[u8]) -> [u8; 32] {
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
     ];
 
-    for chunk in padded.chunks_exact(64) {
+    for chunk in padded.as_chunks::<64>().0 {
         let mut w = [0u32; 64];
-        for (i, word_bytes) in chunk.chunks_exact(4).enumerate() {
-            w[i] = u32::from_be_bytes([word_bytes[0], word_bytes[1], word_bytes[2], word_bytes[3]]);
+        for (i, word_bytes) in chunk.as_chunks::<4>().0.iter().enumerate() {
+            w[i] = u32::from_be_bytes(*word_bytes);
         }
         for i in 16..64 {
             let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
@@ -1025,7 +1025,7 @@ pub fn run_black_swan_singularity_scenario() -> SingularityCrucibleSummary {
     aligned_hdr[2] = 0x01;
     let mut acc_checksum: i128 = 0;
     for i in 0..500_000u64 {
-        let net = hotpath_pass3_cache_aligned(&mut soak_acc, 68_400_00000000 + (i % 100), 10_000_000, 200, &aligned_hdr);
+        let net = hotpath_pass3_cache_aligned(&mut soak_acc, 6_840_000_000_000 + (i % 100), 10_000_000, 200, &aligned_hdr);
         acc_checksum = acc_checksum.wrapping_add(net);
     }
     let soak_ok = acc_checksum > 0 && soak_acc.available_fp == 1_000_000 * FP_SCALE;
@@ -1085,7 +1085,7 @@ mod tests {
 
     #[test]
     fn test_fixed_point_notional_and_fees_exact() {
-        assert_eq!(compute_notional_fp(68_425_50000000, 25000000), 17_106_37500000);
+        assert_eq!(compute_notional_fp(6_842_550_000_000, 25_000_000), 1_710_637_500_000);
         assert_eq!(compute_notional_fp(3, 33_333_333), 0);
         assert_eq!(compute_notional_fp(3, 33_333_334), 1);
 

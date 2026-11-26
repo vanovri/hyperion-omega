@@ -239,9 +239,7 @@ impl Dir16Ipv4Lpm {
             let sub32 = self.ensure_sub32(sub24, octets[2] as usize);
             let count = 1_usize << (32 - prefix);
             let start = (octets[3] as usize) & !(count - 1);
-            for i32 in start..(start + count) {
-                self.tbl32[sub32][i32] = rule_id;
-            }
+            self.tbl32[sub32][start..(start + count)].fill(rule_id);
         }
     }
 
