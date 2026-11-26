@@ -245,11 +245,7 @@ impl DoubleEntryLedger {
     }
 
     #[inline(always)]
-    fn record_account_merkle_update(
-        &mut self,
-        merkle: &mut IncrementalMerkleState,
-        acc_idx: u32,
-    ) {
+    fn record_account_merkle_update(&mut self, merkle: &mut IncrementalMerkleState, acc_idx: u32) {
         if self.merkle_batch_active {
             let idx = acc_idx as usize;
             if self.dirty_slot_flags[idx] == 0 {
@@ -801,13 +797,15 @@ impl DoubleEntryLedger {
 
         // Pre-validate locked balances before mutating any state
         {
-            let seller_base = self.accounts[seller_idx as usize].get_or_create_asset_mut(base_asset)?;
+            let seller_base =
+                self.accounts[seller_idx as usize].get_or_create_asset_mut(base_asset)?;
             if seller_base.locked_fp < base_amt {
                 return Err(LedgerError::InsufficientLockedBalance);
             }
         }
         {
-            let buyer_quote = self.accounts[buyer_idx as usize].get_or_create_asset_mut(quote_asset)?;
+            let buyer_quote =
+                self.accounts[buyer_idx as usize].get_or_create_asset_mut(quote_asset)?;
             if buyer_quote.locked_fp < buyer_quote_debit {
                 return Err(LedgerError::InsufficientLockedBalance);
             }
@@ -1032,7 +1030,8 @@ impl DoubleEntryLedger {
                 SUB_ACCOUNT_AVAILABLE => {
                     let idx = self.get_or_create_account_idx(leg.account_id)?;
                     {
-                        let slot = self.accounts[idx as usize].get_or_create_asset_mut(leg.asset)?;
+                        let slot =
+                            self.accounts[idx as usize].get_or_create_asset_mut(leg.asset)?;
                         slot.available_fp = leg.balance_after_fp;
                     }
                     let h = self.accounts[idx as usize].leaf_hash();
@@ -1049,7 +1048,8 @@ impl DoubleEntryLedger {
                 SUB_ACCOUNT_LOCKED => {
                     let idx = self.get_or_create_account_idx(leg.account_id)?;
                     {
-                        let slot = self.accounts[idx as usize].get_or_create_asset_mut(leg.asset)?;
+                        let slot =
+                            self.accounts[idx as usize].get_or_create_asset_mut(leg.asset)?;
                         slot.locked_fp = leg.balance_after_fp;
                     }
                     let h = self.accounts[idx as usize].leaf_hash();

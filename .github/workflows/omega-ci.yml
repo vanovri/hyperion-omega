@@ -28,6 +28,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Validate Core & Omega Contracts
         run: |
+          pip install --quiet sqlparse
           python scripts/validate_contracts.py
       - name: Run Z3 SMT Formal Proofs & Explicit-State Model Checker
         if: ${{ github.event.inputs.profile != 'core' }}
@@ -56,6 +57,10 @@ jobs:
           - e2e-omega/singularity-harness-rs
     steps:
       - uses: actions/checkout@v4
+      - name: Install System Build Dependencies (Protobuf & CMake)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler cmake pkg-config libssl-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy

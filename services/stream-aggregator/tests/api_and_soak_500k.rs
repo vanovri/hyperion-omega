@@ -2,8 +2,8 @@ use axum::body::to_bytes;
 use axum::http::{Request, StatusCode};
 use hyperion_proto::stream_analytics_service_client::StreamAnalyticsServiceClient;
 use hyperion_proto::{
-    CandleInterval, GetCandlesRequest, GetLatestMicrostructureRequest,
-    GetLiquidityHeatmapRequest, GetVolumeProfileRequest,
+    CandleInterval, GetCandlesRequest, GetLatestMicrostructureRequest, GetLiquidityHeatmapRequest,
+    GetVolumeProfileRequest,
 };
 use hyperion_stream_aggregator::api::grpc::StreamAnalyticsGrpcServer;
 use hyperion_stream_aggregator::api::http::{
@@ -11,14 +11,14 @@ use hyperion_stream_aggregator::api::http::{
 };
 use hyperion_stream_aggregator::api::QueryServiceState;
 use hyperion_stream_aggregator::config::AggregatorConfig;
-use hyperion_stream_aggregator::engine::{
-    CompactFill, CompactL3Delta, StreamAggregatorEngine,
-};
+use hyperion_stream_aggregator::engine::{CompactFill, CompactL3Delta, StreamAggregatorEngine};
 use hyperion_stream_aggregator::storage::timescale::{
     encode_candles_pg_binary_copy, PGCOPY_HEADER_MAGIC,
 };
 use hyperion_stream_aggregator::storage::{AnalyticsStorage, InMemoryTransactionalStore};
-use hyperion_stream_aggregator::synthetic::{generate_ordered_market_stream, SyntheticStreamConfig};
+use hyperion_stream_aggregator::synthetic::{
+    generate_ordered_market_stream, SyntheticStreamConfig,
+};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -39,7 +39,7 @@ async fn grpc_and_http_query_endpoints_and_pgcopy_wire_verification() {
         seed: 777_888,
         event_count: 15_000,
         start_ts_ns: 1_795_040_000_000_000_000,
-        step_ts_ns: 1_000_000, // 15 seconds span
+        step_ts_ns: 1_000_000,           // 15 seconds span
         anchor_price_fp: 18_500_000_000, // 185.00 USDT
     });
     for ev in &stream {
@@ -70,7 +70,12 @@ async fn grpc_and_http_query_endpoints_and_pgcopy_wire_verification() {
 
     let health_resp = app
         .clone()
-        .oneshot(Request::builder().uri("/healthz").body(axum::body::Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/healthz")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(health_resp.status(), StatusCode::OK);
@@ -125,7 +130,10 @@ async fn grpc_and_http_query_endpoints_and_pgcopy_wire_verification() {
     let poc = vp_dto.poc_price_fp.parse::<u64>().unwrap();
     let val = vp_dto.value_area_low_fp.parse::<u64>().unwrap();
     let vah = vp_dto.value_area_high_fp.parse::<u64>().unwrap();
-    assert!(val <= poc && poc <= vah, "Value Area invariant VAL <= POC <= VAH must hold");
+    assert!(
+        val <= poc && poc <= vah,
+        "Value Area invariant VAL <= POC <= VAH must hold"
+    );
 
     let hm_resp = app
         .oneshot(

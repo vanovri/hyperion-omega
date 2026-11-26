@@ -15,11 +15,11 @@ use hyperion_proto::{
     market_event_envelope, AccountAssetBalance, AccountStatus, ApplyAccountRiskActionRequest,
     ApplyAccountRiskActionResponse, CancelOrder, CreditDepositRequest, CreditDepositResponse,
     ExecutionFill, GetL2BookSnapshotRequest, GetL2BookSnapshotResponse,
-    GetMerkleLedgerProofRequest, GetMerkleLedgerProofResponse, I128, L2BookSnapshot, L3BookDelta,
+    GetMerkleLedgerProofRequest, GetMerkleLedgerProofResponse, L2BookSnapshot, L3BookDelta,
     LedgerEntryLine, LedgerJournalEntry, MarketEventEnvelope, MarketRegime, MerkleLedgerProof,
     MerkleProofNode, ModifyOrder, OrderAck, OrderSide, OrderType, PriceLevel,
-    SelfTradePreventionMode, SubmitOrder, TraceMetadata, U128, VerifySystemLedgerInvariantRequest,
-    VerifySystemLedgerInvariantResponse,
+    SelfTradePreventionMode, SubmitOrder, TraceMetadata, VerifySystemLedgerInvariantRequest,
+    VerifySystemLedgerInvariantResponse, I128, U128,
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -746,7 +746,9 @@ fn apply_replayed_wal_frame(
             } else {
                 0
             };
-            if matches!(op, L3OpCode::Cancel) || (matches!(op, L3OpCode::Fill) && d.remaining_qty_fp == 0) {
+            if matches!(op, L3OpCode::Cancel)
+                || (matches!(op, L3OpCode::Fill) && d.remaining_qty_fp == 0)
+            {
                 order_quote_locks.remove(&d.order_id);
             }
             eng.replay_apply_l3_delta(

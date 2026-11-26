@@ -37,8 +37,9 @@ impl Default for AggregatorConfig {
             grpc_bind_addr: "0.0.0.0:50152".to_string(),
             http_bind_addr: "0.0.0.0:8083".to_string(),
             redpanda_brokers: vec!["localhost:19092".to_string()],
-            postgres_dsn: "postgres://hyperion:hyperion_dev_secret@localhost:5432/hyperion?sslmode=disable"
-                .to_string(),
+            postgres_dsn:
+                "postgres://hyperion:hyperion_dev_secret@localhost:5432/hyperion?sslmode=disable"
+                    .to_string(),
             redis_url: "redis://localhost:6379/0".to_string(),
             watermark_lateness_ns: 2_000_000_000, // 2 seconds bounded out-of-orderness
             max_reorder_buffer: 4096,
@@ -131,7 +132,11 @@ impl AggregatorConfig {
                     .to_string(),
             );
         }
-        if self.postgres_dsn.to_ascii_lowercase().contains("sslmode=disable") {
+        if self
+            .postgres_dsn
+            .to_ascii_lowercase()
+            .contains("sslmode=disable")
+        {
             return Err(
                 "SECURITY_FAIL_CLOSED: DATABASE_URL must enforce TLS (sslmode=require/verify-full) in production"
                     .to_string(),
@@ -166,29 +171,29 @@ pub const CANONICAL_INSTRUMENTS: [InstrumentSpec; 4] = [
     InstrumentSpec {
         instrument_id: 1,
         symbol: "BTC-USDT",
-        tick_size_fp: 1_000_000, // 0.01 USDT
-        lot_size_fp: 1_000,      // 0.00001 BTC
+        tick_size_fp: 1_000_000,                // 0.01 USDT
+        lot_size_fp: 1_000,                     // 0.00001 BTC
         default_heatmap_bucket_fp: 100_000_000, // 1.00 USDT bucket
     },
     InstrumentSpec {
         instrument_id: 2,
         symbol: "ETH-USDT",
-        tick_size_fp: 1_000_000, // 0.01 USDT
-        lot_size_fp: 10_000,     // 0.0001 ETH
+        tick_size_fp: 1_000_000,               // 0.01 USDT
+        lot_size_fp: 10_000,                   // 0.0001 ETH
         default_heatmap_bucket_fp: 50_000_000, // 0.50 USDT bucket
     },
     InstrumentSpec {
         instrument_id: 3,
         symbol: "SOL-USDT",
-        tick_size_fp: 100_000, // 0.001 USDT
-        lot_size_fp: 100_000,  // 0.001 SOL
+        tick_size_fp: 100_000,                 // 0.001 USDT
+        lot_size_fp: 100_000,                  // 0.001 SOL
         default_heatmap_bucket_fp: 10_000_000, // 0.10 USDT bucket
     },
     InstrumentSpec {
         instrument_id: 4,
         symbol: "HYPE-USDT",
-        tick_size_fp: 10_000,    // 0.0001 USDT
-        lot_size_fp: 1_000_000,  // 0.01 HYPE
+        tick_size_fp: 10_000,                 // 0.0001 USDT
+        lot_size_fp: 1_000_000,               // 0.01 HYPE
         default_heatmap_bucket_fp: 1_000_000, // 0.01 USDT bucket
     },
 ];

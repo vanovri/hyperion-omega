@@ -130,7 +130,11 @@ pub struct PartitionCheckpoint {
 }
 
 impl PartitionCheckpoint {
-    pub fn new(consumer_group: impl Into<String>, topic: impl Into<String>, partition_id: i32) -> Self {
+    pub fn new(
+        consumer_group: impl Into<String>,
+        topic: impl Into<String>,
+        partition_id: i32,
+    ) -> Self {
         Self {
             consumer_group: consumer_group.into(),
             topic: topic.into(),
@@ -175,7 +179,10 @@ mod tests {
             assert!(dedup.check_and_mark(s), "first arrival of {s} must pass");
         }
         for s in [8_u64, 9, 10, 11, 12] {
-            assert!(!dedup.check_and_mark(s), "duplicate of {s} must be rejected");
+            assert!(
+                !dedup.check_and_mark(s),
+                "duplicate of {s} must be rejected"
+            );
         }
         assert_eq!(dedup.accepted_count(), 5);
 

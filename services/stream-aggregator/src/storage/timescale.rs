@@ -7,8 +7,8 @@ use bytes::{BufMut, BytesMut};
 use chrono::{DateTime, TimeZone, Utc};
 use futures_util::pin_mut;
 use hyperion_proto::{
-    GetVolumeProfileResponse, I128, LiquidityHeatmapBucket, MicrostructureMetrics,
-    OhlcvCandle, U128, VolumeProfileBin,
+    GetVolumeProfileResponse, LiquidityHeatmapBucket, MicrostructureMetrics, OhlcvCandle,
+    VolumeProfileBin, I128, U128,
 };
 use postgres_types::{ToSql, Type};
 use std::sync::Arc;
@@ -225,8 +225,7 @@ impl AnalyticsStorage for TimescaleFlusher {
                     let side = (f.aggressor_side.clamp(1, 2)) as i16;
                     let price_fp = f.price_fp as i64;
                     let qty_fp = f.qty_fp as i64;
-                    let notional =
-                        PgNumericI128::from(f.notional_fp.map(u128::from).unwrap_or(0));
+                    let notional = PgNumericI128::from(f.notional_fp.map(u128::from).unwrap_or(0));
                     let hash_bytes: &[u8] = if f.wal_blake3_hash.is_empty() {
                         &[0_u8; 32]
                     } else {

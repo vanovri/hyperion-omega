@@ -224,7 +224,8 @@ impl CandleAccumulator {
         }
 
         let qty_u128 = qty_fp as u128;
-        let notional_fp = notional_override_fp.unwrap_or_else(|| calc_notional_fp(price_fp, qty_fp));
+        let notional_fp =
+            notional_override_fp.unwrap_or_else(|| calc_notional_fp(price_fp, qty_fp));
         self.base_volume_fp = self.base_volume_fp.saturating_add(qty_u128);
         self.quote_volume_fp = self.quote_volume_fp.saturating_add(notional_fp);
         self.raw_px_qty_sum = self
@@ -249,8 +250,8 @@ impl CandleAccumulator {
 
         // O(1) sub-slice update for 16-point time-weighted average price (pure 64-bit fast division)
         let rel_ns = exec_ts_ns.saturating_sub(self.bucket_open_ts_ns);
-        let sub_idx = (rel_ns / self.timeframe.sub_slice_ns()).min((TWAP_SUB_SLICES - 1) as u64)
-            as usize;
+        let sub_idx =
+            (rel_ns / self.timeframe.sub_slice_ns()).min((TWAP_SUB_SLICES - 1) as u64) as usize;
         let sub = &mut self.sub_slices[sub_idx];
         if sub.price_fp == 0 || key >= sub.latest_key {
             sub.latest_key = key;
@@ -593,7 +594,10 @@ impl MultiTimeframeCandleBook {
 
     #[inline]
     pub fn allocated_capacity_slots(&self) -> usize {
-        self.series.iter().map(|s| s.allocated_capacity_slots()).sum()
+        self.series
+            .iter()
+            .map(|s| s.allocated_capacity_slots())
+            .sum()
     }
 }
 
@@ -605,10 +609,38 @@ mod tests {
     fn candle_out_of_order_commutativity() {
         let fills = [
             // (ts_ns, seq, fill_id, price_fp, qty_fp, side)
-            (1_050_000_000_u64, 1_u64, 1_u64, 100_000_000_000_u64, 200_000_000_u64, OrderSide::Buy),
-            (1_250_000_000_u64, 2_u64, 2_u64, 105_000_000_000_u64, 100_000_000_u64, OrderSide::Sell),
-            (1_600_000_000_u64, 3_u64, 3_u64, 98_000_000_000_u64, 300_000_000_u64, OrderSide::Buy),
-            (1_950_000_000_u64, 4_u64, 4_u64, 102_000_000_000_u64, 400_000_000_u64, OrderSide::Sell),
+            (
+                1_050_000_000_u64,
+                1_u64,
+                1_u64,
+                100_000_000_000_u64,
+                200_000_000_u64,
+                OrderSide::Buy,
+            ),
+            (
+                1_250_000_000_u64,
+                2_u64,
+                2_u64,
+                105_000_000_000_u64,
+                100_000_000_u64,
+                OrderSide::Sell,
+            ),
+            (
+                1_600_000_000_u64,
+                3_u64,
+                3_u64,
+                98_000_000_000_u64,
+                300_000_000_u64,
+                OrderSide::Buy,
+            ),
+            (
+                1_950_000_000_u64,
+                4_u64,
+                4_u64,
+                102_000_000_000_u64,
+                400_000_000_u64,
+                OrderSide::Sell,
+            ),
         ];
 
         let mut ordered = CandleAccumulator::empty(Timeframe::S1);

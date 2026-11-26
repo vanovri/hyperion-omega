@@ -280,7 +280,11 @@ impl OrderArena {
         let mut hot = vec![HotOrderNode::default(); capacity].into_boxed_slice();
         let cold = vec![ColdOrderMeta::default(); capacity].into_boxed_slice();
         for (i, node) in hot.iter_mut().enumerate() {
-            node.next_in_level = if i + 1 < capacity { (i + 1) as u32 } else { NULL_IDX };
+            node.next_in_level = if i + 1 < capacity {
+                (i + 1) as u32
+            } else {
+                NULL_IDX
+            };
         }
         Self {
             hot,
@@ -294,7 +298,11 @@ impl OrderArena {
         let cap = self.hot.len();
         for (i, node) in self.hot.iter_mut().enumerate() {
             node.occupied = false;
-            node.next_in_level = if i + 1 < cap { (i + 1) as u32 } else { NULL_IDX };
+            node.next_in_level = if i + 1 < cap {
+                (i + 1) as u32
+            } else {
+                NULL_IDX
+            };
         }
         self.free_head = 0;
         self.active_len = 0;
@@ -437,7 +445,11 @@ impl PriceSideBook {
         assert!(capacity > 0 && capacity < (NULL_IDX as usize));
         let mut nodes = vec![PriceLevelNode::default(); capacity].into_boxed_slice();
         for (i, n) in nodes.iter_mut().enumerate() {
-            n.worse_level = if i + 1 < capacity { (i + 1) as u32 } else { NULL_IDX };
+            n.worse_level = if i + 1 < capacity {
+                (i + 1) as u32
+            } else {
+                NULL_IDX
+            };
         }
         Self {
             is_bid,
@@ -454,7 +466,11 @@ impl PriceSideBook {
         let cap = self.nodes.len();
         for (i, n) in self.nodes.iter_mut().enumerate() {
             *n = PriceLevelNode::default();
-            n.worse_level = if i + 1 < cap { (i + 1) as u32 } else { NULL_IDX };
+            n.worse_level = if i + 1 < cap {
+                (i + 1) as u32
+            } else {
+                NULL_IDX
+            };
         }
         self.price_index.clear();
         self.free_head = 0;
@@ -516,7 +532,8 @@ impl PriceSideBook {
             return NULL_IDX;
         }
         let left = self.nodes[t as usize].left;
-        if left != NULL_IDX && self.nodes[left as usize].aa_level == self.nodes[t as usize].aa_level {
+        if left != NULL_IDX && self.nodes[left as usize].aa_level == self.nodes[t as usize].aa_level
+        {
             let left_right = self.nodes[left as usize].right;
             self.nodes[t as usize].left = left_right;
             self.nodes[left as usize].right = t;

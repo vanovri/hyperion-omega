@@ -135,7 +135,7 @@ type workerShard struct {
 	bots     []*agents.BotAccount
 	faultRNG rng.Stream
 	counters chaos.LocalFaultCounters
-	_pad     [64]byte
+	_     [64]byte
 }
 
 // Simulator orchestrates 1,000+ heterogeneous trading agents, adversarial syndicate rings,
@@ -168,19 +168,19 @@ type Simulator struct {
 
 	// Cache-line isolated atomic counters (zero cross-core false sharing)
 	ordersSubmitted  atomic.Uint64
-	_padOrdSub       [56]byte
+	_       [56]byte
 	ordersAccepted   atomic.Uint64
-	_padOrdAcc       [56]byte
+	_       [56]byte
 	ordersRejected   atomic.Uint64
-	_padOrdRej       [56]byte
+	_       [56]byte
 	ordersDeduped    atomic.Uint64
-	_padOrdDup       [56]byte
+	_       [56]byte
 	cancelsSubmitted atomic.Uint64
-	_padCanSub       [56]byte
+	_       [56]byte
 	tradesMatched    atomic.Uint64
-	_padTrdMat       [56]byte
+	_       [56]byte
 	syndicateAttacks atomic.Uint64
-	_padSynAtk       [56]byte
+	_       [56]byte
 	ordersPerSec     atomic.Uint64
 	tradesPerSec     atomic.Uint64
 

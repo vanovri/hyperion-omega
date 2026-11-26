@@ -379,13 +379,14 @@ func TestTorture_5100ConcurrentWebSockets_SlowConsumer_Replay_CircuitBreaker_Zer
 
 	// 5. Upstream Fault Injection -> Circuit Breaker Trip (OPEN) -> Recovery (HALF-OPEN -> CLOSED)!
 	ledgerMock.failMode.Store(true)
+	tripTS := strconv.FormatInt(time.Now().UnixNano(), 10)
 	for n := 100; n < 116; n++ {
 		nonceStr := strconv.Itoa(n)
-		sig := auth.SignEd25519(priv, nowNS, nonceStr, http.MethodPost, "/api/v1/orders", ordPayload)
+		sig := auth.SignEd25519(priv, tripTS, nonceStr, http.MethodPost, "/api/v1/orders", ordPayload)
 		req, _ := http.NewRequest(http.MethodPost, gwURL+"/api/v1/orders", bytes.NewReader(ordPayload))
 		req.Header.Set(auth.HeaderAccountID, "5001")
 		req.Header.Set(auth.HeaderKeyID, "torture-ed")
-		req.Header.Set(auth.HeaderTimestamp, nowNS)
+		req.Header.Set(auth.HeaderTimestamp, tripTS)
 		req.Header.Set(auth.HeaderNonce, nonceStr)
 		req.Header.Set(auth.HeaderSignature, sig)
 		req.Header.Set("Idempotency-Key", "idem-trip-"+nonceStr)

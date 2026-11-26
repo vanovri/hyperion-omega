@@ -53,23 +53,30 @@ async fn main() -> anyhow::Result<()> {
                 tracing::info!("Connected to TimescaleDB with Binary COPY staging tables ready");
                 let ts_arc = Arc::new(ts_flusher);
 
-                let hot_cache: Option<Arc<dyn HotStateCache>> =
-                    match RedisHotCache::connect(&cfg.redis_url).await {
-                        Ok(rc) => {
-                            tracing::info!("Connected to Redis 7 hot cache");
-                            Some(Arc::new(rc))
-                        }
-                        Err(e) => {
-                            tracing::warn!(error = %e, "Redis 7 unavailable; continuing without L1 Redis mirror");
-                            None
-                        }
-                    };
+                let hot_cache: Option<Arc<dyn HotStateCache>> = match RedisHotCache::connect(
+                    &cfg.redis_url,
+                )
+                .await
+                {
+                    Ok(rc) => {
+                        tracing::info!("Connected to Redis 7 hot cache");
+                        Some(Arc::new(rc))
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "Redis 7 unavailable; continuing without L1 Redis mirror");
+                        None
+                    }
+                };
 
-                match ClientBuilder::new(cfg.redpanda_brokers.clone()).build().await {
+                match ClientBuilder::new(cfg.redpanda_brokers.clone())
+                    .build()
+                    .await
+                {
                     Ok(kafka_client) => {
                         let kafka_arc = Arc::new(kafka_client);
-                        let publisher =
-                            Arc::new(RedpandaAggregatePublisher::from_client(Arc::clone(&kafka_arc)));
+                        let publisher = Arc::new(RedpandaAggregatePublisher::from_client(
+                            Arc::clone(&kafka_arc),
+                        ));
                         let coordinator = ExactlyOnceCoordinator::from_shared_engine(
                             Arc::clone(&engine),
                             cfg.batch_flush_max_events,

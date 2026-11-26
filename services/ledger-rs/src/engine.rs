@@ -18,8 +18,7 @@ use crate::merkle::{
 use crate::ring::SpscProducer;
 use crate::wal::{
     SnapshotAccountV1, SnapshotAssetBalanceV1, SnapshotAssetTotalV1, SnapshotInstrumentV1,
-    SnapshotOrderV1, SnapshotPayloadV1, SnapshotStore, WalError, WalFrame, WalSyncMode,
-    WalWriter,
+    SnapshotOrderV1, SnapshotPayloadV1, SnapshotStore, WalError, WalFrame, WalSyncMode, WalWriter,
 };
 use std::path::{Path, PathBuf};
 
@@ -429,7 +428,9 @@ impl DeterministicExchangeEngine {
     ) -> usize {
         let sym = InstrumentSymbol::from_str_trunc(symbol);
         for (i, b) in self.books.iter().enumerate() {
-            if (instrument_id != 0 && b.instrument_id == instrument_id) || (!sym.is_empty() && b.symbol == sym) {
+            if (instrument_id != 0 && b.instrument_id == instrument_id)
+                || (!sym.is_empty() && b.symbol == sym)
+            {
                 return i;
             }
         }
@@ -645,8 +646,8 @@ impl DeterministicExchangeEngine {
                             c.regime = reg;
                         }
                     } else {
-                        let idx = self
-                            .resolve_book_idx(0, InstrumentSymbol::from_str_trunc(&ack.symbol));
+                        let idx =
+                            self.resolve_book_idx(0, InstrumentSymbol::from_str_trunc(&ack.symbol));
                         self.configs[idx].regime = reg;
                     }
                 }
@@ -1335,7 +1336,11 @@ impl DeterministicExchangeEngine {
         }
 
         let mut taker_rem_qty = qty_fp;
-        let mut taker_locked_quote_rem: i128 = if side == Side::Buy { required_lock_fp } else { 0 };
+        let mut taker_locked_quote_rem: i128 = if side == Side::Buy {
+            required_lock_fp
+        } else {
+            0
+        };
         let mut cumulative_filled_qty: u64 = 0;
         let mut weighted_px_qty_sum: u128 = 0;
         let mut stp_canceled_taker = false;
@@ -1404,8 +1409,8 @@ impl DeterministicExchangeEngine {
 
             let fill_qty = taker_rem_qty.min(maker_hot.remaining_qty_fp);
             let exec_price = maker_hot.price_fp;
-            let notional_fp = checked_notional_fp(exec_price, fill_qty)
-                .expect("validated notional fits in u128");
+            let notional_fp =
+                checked_notional_fp(exec_price, fill_qty).expect("validated notional fits in u128");
             let maker_fee_fp = checked_fee_fp(notional_fp, cfg.maker_fee_ppm)
                 .expect("validated maker fee fits in i64");
             let taker_fee_fp = checked_fee_fp(notional_fp, cfg.taker_fee_ppm)
@@ -1490,7 +1495,8 @@ impl DeterministicExchangeEngine {
             self.push_ring_event(OutboundRingEvent::Fill(raw_fill));
 
             // Update or remove resting Maker order in LOB
-            let maker_old_locked_quote = self.books[book_idx].orders.cold(head_slot).locked_quote_fp;
+            let maker_old_locked_quote =
+                self.books[book_idx].orders.cold(head_slot).locked_quote_fp;
             let maker_new_locked_quote = if maker_hot.side == Side::Buy {
                 let rem = maker_old_locked_quote - buyer_quote_spent;
                 debug_assert!(rem >= 0);
@@ -1558,11 +1564,13 @@ impl DeterministicExchangeEngine {
 
             taker_rem_qty -= fill_qty;
             cumulative_filled_qty += fill_qty;
-            weighted_px_qty_sum = weighted_px_qty_sum.saturating_add((exec_price as u128) * (fill_qty as u128));
+            weighted_px_qty_sum =
+                weighted_px_qty_sum.saturating_add((exec_price as u128) * (fill_qty as u128));
         }
 
         // 7. Post-match remainder & unused collateral settlement
-        let (final_status, reject_reason, reject_detail, final_rem_on_book) = if taker_rem_qty == 0 {
+        let (final_status, reject_reason, reject_detail, final_rem_on_book) = if taker_rem_qty == 0
+        {
             if side == Side::Buy && taker_locked_quote_rem > 0 {
                 let rel_seq = self.alloc_seq();
                 if let Some(rj) = self
@@ -1903,7 +1911,9 @@ impl DeterministicExchangeEngine {
             status: AckStatus::Canceled,
             reject_reason: RejectCode::None,
             reject_detail: "",
-            filled_qty_fp: removed.initial_qty_fp.saturating_sub(removed.remaining_qty_fp),
+            filled_qty_fp: removed
+                .initial_qty_fp
+                .saturating_sub(removed.remaining_qty_fp),
             remaining_qty_fp: 0,
             avg_fill_price_fp: 0,
             engine_ts_ns: ts,
@@ -2101,7 +2111,10 @@ impl DeterministicExchangeEngine {
                     new_locked_quote,
                     &mut self.lob_acc,
                 );
-                self.books[book_idx].orders.cold_mut(slot_idx).initial_qty_fp = cmd.new_qty_fp;
+                self.books[book_idx]
+                    .orders
+                    .cold_mut(slot_idx)
+                    .initial_qty_fp = cmd.new_qty_fp;
                 self.emit_l3_delta(
                     book_idx,
                     L3OpCode::Modify,
@@ -2138,7 +2151,8 @@ impl DeterministicExchangeEngine {
         }
 
         // Case B: Price changed OR size increased -> pre-verify balance + Post-Only BEFORE touching existing order!
-        if existing.kind == OrderKind::PostOnly || cfg.regime == MarketRegimeState::PostOnlyAuction {
+        if existing.kind == OrderKind::PostOnly || cfg.regime == MarketRegimeState::PostOnlyAuction
+        {
             let would_cross = match existing.side {
                 Side::Buy => self.books[book_idx]
                     .best_ask_fp()
@@ -2276,8 +2290,7 @@ impl DeterministicExchangeEngine {
                     c.regime = reg;
                 }
             } else {
-                let idx =
-                    self.resolve_book_idx(0, InstrumentSymbol::from_str_trunc(target_symbol));
+                let idx = self.resolve_book_idx(0, InstrumentSymbol::from_str_trunc(target_symbol));
                 self.configs[idx].regime = reg;
             }
         }
@@ -2345,10 +2358,12 @@ impl DeterministicExchangeEngine {
             Vec::new()
         };
         let (leaf_hash, proof, state_root) = if self.ledger.get_account(account_id).is_some() {
-            self.merkle.generate_account_proof(account_id, &self.lob_acc)
+            self.merkle
+                .generate_account_proof(account_id, &self.lob_acc)
         } else {
             // Non-existent account proves clean emptiness at its bucket against `state_root`
-            self.merkle.generate_account_proof(account_id, &self.lob_acc)
+            self.merkle
+                .generate_account_proof(account_id, &self.lob_acc)
         };
 
         let quote_sym = AssetSymbol::from_str_trunc(primary_quote_asset);
@@ -2708,12 +2723,17 @@ impl DeterministicExchangeEngine {
         let wal_path = data_dir.join("wal").join("segment_00000001.wal");
         let snap_dir = data_dir.join("snapshots");
 
-        let (mut wal_writer, frames, truncated_tail) = WalWriter::open_segment(&wal_path, sync_mode)?;
+        let (mut wal_writer, frames, truncated_tail) =
+            WalWriter::open_segment(&wal_path, sync_mode)?;
         let max_wal_seq = frames.last().map(|f| f.engine_seq).unwrap_or(u64::MAX);
         let latest_snap = SnapshotStore::find_latest_snapshot_before(&snap_dir, max_wal_seq)?;
 
-        let mut engine =
-            Self::with_wal_and_ring(sizing, WalWriter::in_memory(), Some(snap_dir), outbound_ring);
+        let mut engine = Self::with_wal_and_ring(
+            sizing,
+            WalWriter::in_memory(),
+            Some(snap_dir),
+            outbound_ring,
+        );
 
         let mut start_after_seq = 0u64;
         if let Some(snap) = &latest_snap {

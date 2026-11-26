@@ -45,7 +45,7 @@ type hmacScratch struct {
 	macSum   [32]byte
 	bodyHex  [64]byte
 	preimage [256]byte
-	_pad     [64]byte
+	_     [64]byte
 }
 
 var hmacScratchPool = sync.Pool{

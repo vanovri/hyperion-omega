@@ -102,12 +102,20 @@ fn stress_260k_ordered_and_shuffled_matches_naive_oracle_bit_exact() {
 
     // 5. Verify Microstructure VWAP, Cont-Kukanov-Stoikov OFI, and Book Imbalance 5/10/20
     let pipe_ord = eng_ordered.pipeline("BTC-USDT").expect("BTC-USDT pipeline");
-    let pipe_shuf = eng_shuffled.pipeline("BTC-USDT").expect("BTC-USDT pipeline");
+    let pipe_shuf = eng_shuffled
+        .pipeline("BTC-USDT")
+        .expect("BTC-USDT pipeline");
 
     assert_eq!(pipe_ord.micro().session_vwap_fp(), expected.session_vwap_fp);
-    assert_eq!(pipe_shuf.micro().session_vwap_fp(), expected.session_vwap_fp);
+    assert_eq!(
+        pipe_shuf.micro().session_vwap_fp(),
+        expected.session_vwap_fp
+    );
     assert_eq!(pipe_ord.micro().rolling_vwap_fp(), expected.rolling_vwap_fp);
-    assert_eq!(pipe_shuf.micro().rolling_vwap_fp(), expected.rolling_vwap_fp);
+    assert_eq!(
+        pipe_shuf.micro().rolling_vwap_fp(),
+        expected.rolling_vwap_fp
+    );
 
     assert_eq!(
         pipe_ord.micro().cumulative_ofi_fp(),
@@ -136,7 +144,10 @@ fn stress_260k_ordered_and_shuffled_matches_naive_oracle_bit_exact() {
         m_ord.book_imbalance_top20_ppm,
         expected.book_imbalance_top20_ppm
     );
-    assert_eq!(m_shuf.book_imbalance_top5_ppm, m_ord.book_imbalance_top5_ppm);
+    assert_eq!(
+        m_shuf.book_imbalance_top5_ppm,
+        m_ord.book_imbalance_top5_ppm
+    );
     assert_eq!(
         m_shuf.book_imbalance_top10_ppm,
         m_ord.book_imbalance_top10_ppm

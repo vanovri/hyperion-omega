@@ -50,7 +50,11 @@ pub fn compute_naive_reference(
                 if f.price_fp == 0 || f.qty_fp == 0 || f.exec_ts_ns == 0 {
                     continue;
                 }
-                let id = if f.fill_id > 0 { f.fill_id } else { f.engine_seq };
+                let id = if f.fill_id > 0 {
+                    f.fill_id
+                } else {
+                    f.engine_seq
+                };
                 if id == 0 || !seen_fills.insert(id) {
                     continue;
                 }
@@ -59,7 +63,8 @@ pub fn compute_naive_reference(
                 }
                 if f.exec_ts_ns > max_ts_ns {
                     max_ts_ns = f.exec_ts_ns;
-                    watermark_ts_ns = watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
+                    watermark_ts_ns =
+                        watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
                 }
                 accepted.push((
                     f.exec_ts_ns,
@@ -77,7 +82,8 @@ pub fn compute_naive_reference(
                 }
                 if d.event_ts_ns > max_ts_ns {
                     max_ts_ns = d.event_ts_ns;
-                    watermark_ts_ns = watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
+                    watermark_ts_ns =
+                        watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
                 }
                 accepted.push((
                     d.event_ts_ns,
@@ -95,7 +101,8 @@ pub fn compute_naive_reference(
                 }
                 if s.snapshot_ts_ns > max_ts_ns {
                     max_ts_ns = s.snapshot_ts_ns;
-                    watermark_ts_ns = watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
+                    watermark_ts_ns =
+                        watermark_ts_ns.max(max_ts_ns.saturating_sub(allowed_lateness_ns));
                 }
                 accepted.push((
                     s.snapshot_ts_ns,
@@ -249,7 +256,11 @@ pub fn compute_naive_reference(
                         asks.insert(l.price_fp, l.total_qty_fp);
                     }
                 }
-                let cur_b = bids.iter().next_back().map(|(&p, &q)| (p, q)).unwrap_or((0, 0));
+                let cur_b = bids
+                    .iter()
+                    .next_back()
+                    .map(|(&p, &q)| (p, q))
+                    .unwrap_or((0, 0));
                 let cur_a = asks.iter().next().map(|(&p, &q)| (p, q)).unwrap_or((0, 0));
                 if !has_prev_bbo {
                     if cur_b.0 > 0 || cur_a.0 > 0 {
@@ -290,7 +301,11 @@ pub fn compute_naive_reference(
                         book.insert(d.price_fp, next);
                     }
                 }
-                let cur_b = bids.iter().next_back().map(|(&p, &q)| (p, q)).unwrap_or((0, 0));
+                let cur_b = bids
+                    .iter()
+                    .next_back()
+                    .map(|(&p, &q)| (p, q))
+                    .unwrap_or((0, 0));
                 let cur_a = asks.iter().next().map(|(&p, &q)| (p, q)).unwrap_or((0, 0));
                 if !has_prev_bbo {
                     if cur_b.0 > 0 || cur_a.0 > 0 {
@@ -329,12 +344,9 @@ pub fn compute_naive_reference(
         .map(|&(_, d)| d)
         .sum();
 
-    let sum_top_bids = |k: usize| -> u128 {
-        bids.iter().rev().take(k).map(|(_, &q)| q as u128).sum()
-    };
-    let sum_top_asks = |k: usize| -> u128 {
-        asks.iter().take(k).map(|(_, &q)| q as u128).sum()
-    };
+    let sum_top_bids =
+        |k: usize| -> u128 { bids.iter().rev().take(k).map(|(_, &q)| q as u128).sum() };
+    let sum_top_asks = |k: usize| -> u128 { asks.iter().take(k).map(|(_, &q)| q as u128).sum() };
 
     let imb5 = calc_imbalance_ppm(sum_top_bids(5), sum_top_asks(5));
     let imb10 = calc_imbalance_ppm(sum_top_bids(10), sum_top_asks(10));

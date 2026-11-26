@@ -4,7 +4,9 @@ use hyperion_stream_aggregator::config::{topics, AggregatorConfig};
 use hyperion_stream_aggregator::engine::{EngineError, StreamAggregatorEngine};
 use hyperion_stream_aggregator::reference::compute_naive_reference;
 use hyperion_stream_aggregator::storage::{AnalyticsStorage, InMemoryTransactionalStore};
-use hyperion_stream_aggregator::synthetic::{generate_ordered_market_stream, SyntheticStreamConfig};
+use hyperion_stream_aggregator::synthetic::{
+    generate_ordered_market_stream, SyntheticStreamConfig,
+};
 use std::sync::Arc;
 
 #[tokio::test]
@@ -47,12 +49,8 @@ async fn crash_recovery_mid_100k_events_zero_volume_duplication() {
     // --- PHASE 1: Consumer #1 processes 53,719 events (21 committed batches = 52,500 events,
     //              plus 1,219 uncommitted dirty in-memory events mid-candle!) then CRASHES! ---
     {
-        let mut consumer_1 = ExactlyOnceCoordinator::new(
-            cfg.clone(),
-            Arc::clone(&store),
-            Arc::clone(&broker),
-            None,
-        );
+        let mut consumer_1 =
+            ExactlyOnceCoordinator::new(cfg.clone(), Arc::clone(&store), Arc::clone(&broker), None);
         let read_count = consumer_1
             .drain_in_memory_broker(&broker, &source_topics, 53_719, false)
             .await
@@ -72,12 +70,8 @@ async fn crash_recovery_mid_100k_events_zero_volume_duplication() {
     // --- PHASE 2: Spawn brand-new Consumer #2, recover from last ACID checkpoint,
     //              inject duplicate replay of 1,500 already-committed broker records,
     //              and finish consuming up to 100,000 events! ---
-    let mut consumer_2 = ExactlyOnceCoordinator::new(
-        cfg.clone(),
-        Arc::clone(&store),
-        Arc::clone(&broker),
-        None,
-    );
+    let mut consumer_2 =
+        ExactlyOnceCoordinator::new(cfg.clone(), Arc::clone(&store), Arc::clone(&broker), None);
     let recovered = consumer_2
         .recover_from_storage(&cfg.consumer_group)
         .await

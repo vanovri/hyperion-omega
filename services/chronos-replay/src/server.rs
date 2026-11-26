@@ -171,13 +171,19 @@ pub fn build_http_router(state: Arc<ChronosServiceState>) -> Router {
         .route("/healthz", get(handle_healthz))
         .route("/metrics", get(handle_metrics))
         .route("/api/v1/chronos/timeline", get(handle_timeline_info))
-        .route("/api/v1/chronos/seek", get(handle_seek_get).post(handle_seek_post))
+        .route(
+            "/api/v1/chronos/seek",
+            get(handle_seek_get).post(handle_seek_post),
+        )
         .route("/api/v1/chronos/fork", post(handle_fork_post))
         .route("/api/v1/chronos/forks", get(handle_list_forks))
         .route("/events/replay", get(handle_sse_replay))
         .route("/api/v1/chronos/replay/stream", get(handle_sse_replay))
         .route("/events/replay/control", post(handle_replay_control))
-        .route("/api/v1/chronos/replay/control", post(handle_replay_control))
+        .route(
+            "/api/v1/chronos/replay/control",
+            post(handle_replay_control),
+        )
         .layer(middleware::from_fn(cors_middleware))
         .with_state(state)
 }
@@ -343,7 +349,10 @@ fn de_opt_u64<'de, D: Deserializer<'de>>(d: D) -> Result<Option<u64>, D::Error> 
             if s.trim().is_empty() {
                 Ok(None)
             } else {
-                s.trim().parse::<u64>().map(Some).map_err(serde::de::Error::custom)
+                s.trim()
+                    .parse::<u64>()
+                    .map(Some)
+                    .map_err(serde::de::Error::custom)
             }
         }
     }
@@ -367,7 +376,10 @@ fn de_opt_u128<'de, D: Deserializer<'de>>(d: D) -> Result<Option<u128>, D::Error
             if s.trim().is_empty() {
                 Ok(None)
             } else {
-                s.trim().parse::<u128>().map(Some).map_err(serde::de::Error::custom)
+                s.trim()
+                    .parse::<u128>()
+                    .map(Some)
+                    .map_err(serde::de::Error::custom)
             }
         }
     }

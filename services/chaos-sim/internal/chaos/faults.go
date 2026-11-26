@@ -99,15 +99,15 @@ type LocalFaultCounters struct {
 // Each counter is cache-line padded to prevent false sharing across concurrent callers.
 type FaultCounters struct {
 	ReorderedPackets    atomic.Uint64
-	_pad0               [56]byte
+	_               [56]byte
 	DuplicatedRequests  atomic.Uint64
-	_pad1               [56]byte
+	_               [56]byte
 	ClockSkewedRequests atomic.Uint64
-	_pad2               [56]byte
+	_               [56]byte
 	CorruptedSignatures atomic.Uint64
-	_pad3               [56]byte
+	_               [56]byte
 	PartitionDrops      atomic.Uint64
-	_pad4               [56]byte
+	_               [56]byte
 }
 
 type FaultStatsSnapshot struct {

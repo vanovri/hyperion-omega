@@ -129,11 +129,23 @@ impl QueryServiceState {
     ) -> Result<Vec<LiquidityHeatmapBucket>, StorageError> {
         let db_cells = self
             .storage
-            .query_heatmap(symbol, from_ts_ns, to_ts_ns, price_bucket_size_fp, time_bucket_ns)
+            .query_heatmap(
+                symbol,
+                from_ts_ns,
+                to_ts_ns,
+                price_bucket_size_fp,
+                time_bucket_ns,
+            )
             .await?;
         let hot_cells = {
             let guard = self.engine.read();
-            guard.query_heatmap(symbol, from_ts_ns, to_ts_ns, price_bucket_size_fp, time_bucket_ns)
+            guard.query_heatmap(
+                symbol,
+                from_ts_ns,
+                to_ts_ns,
+                price_bucket_size_fp,
+                time_bucket_ns,
+            )
         };
 
         let mut merged: BTreeMap<(u64, u64), LiquidityHeatmapBucket> = BTreeMap::new();

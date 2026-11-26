@@ -233,19 +233,33 @@ mod tests {
             PgNumericI128(s)
                 .to_sql(&Type::NUMERIC, &mut buf)
                 .expect("encode numeric");
-            let decoded =
-                PgNumericI128::from_sql(&Type::NUMERIC, &buf).expect("decode numeric");
+            let decoded = PgNumericI128::from_sql(&Type::NUMERIC, &buf).expect("decode numeric");
             assert_eq!(decoded.0, s);
         }
     }
 
     #[test]
     fn imbalance_and_vwap_exactness() {
-        assert_eq!(calc_notional_fp(6_842_550_000_000, 125_000_000), 8_553_187_500_000);
-        assert_eq!(calc_mid_price_fp(100_000_000, 102_000_000, 99_000_000), 101_000_000);
-        assert_eq!(calc_spread(100_000_000, 102_000_000, 101_000_000), (2_000_000, 198));
-        assert_eq!(calc_taker_buy_ratio_ppm(750_000_000, 1_000_000_000), 750_000);
-        assert_eq!(quantize_price_bucket(6_842_550_000_000, 100_000_000), 6_842_500_000_000);
+        assert_eq!(
+            calc_notional_fp(6_842_550_000_000, 125_000_000),
+            8_553_187_500_000
+        );
+        assert_eq!(
+            calc_mid_price_fp(100_000_000, 102_000_000, 99_000_000),
+            101_000_000
+        );
+        assert_eq!(
+            calc_spread(100_000_000, 102_000_000, 101_000_000),
+            (2_000_000, 198)
+        );
+        assert_eq!(
+            calc_taker_buy_ratio_ppm(750_000_000, 1_000_000_000),
+            750_000
+        );
+        assert_eq!(
+            quantize_price_bucket(6_842_550_000_000, 100_000_000),
+            6_842_500_000_000
+        );
 
         assert_eq!(calc_imbalance_ppm(100, 100), 0);
         assert_eq!(calc_imbalance_ppm(300, 100), 500_000);

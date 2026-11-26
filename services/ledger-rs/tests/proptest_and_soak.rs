@@ -1,13 +1,7 @@
 use hyperion_proto::{
     CancelOrder, CreditDepositRequest, ModifyOrder, OrderSide, OrderStatus, OrderType,
-    SelfTradePreventionMode, SubmitOrder, U128, VerifySystemLedgerInvariantRequest,
+    SelfTradePreventionMode, SubmitOrder, VerifySystemLedgerInvariantRequest, U128,
 };
-use proptest::prelude::*;
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::cell::Cell;
-use std::sync::atomic::{AtomicIsize, Ordering};
-use std::sync::RwLock;
-use std::time::Instant;
 use ledger_rs::arena_lob::{OrderKind, Side, StpPolicy};
 use ledger_rs::engine::{
     CancelOrderCmd, DeterministicExchangeEngine, EngineSizing, ModifyOrderCmd, SubmitOrderCmd,
@@ -15,6 +9,12 @@ use ledger_rs::engine::{
 use ledger_rs::fixed::{AssetSymbol, ClientOrderId, InstrumentSymbol, FP_SCALE_U64};
 use ledger_rs::ring::spsc_channel;
 use ledger_rs::wal::{WalReader, WalSyncMode, WalWriter};
+use proptest::prelude::*;
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
+use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::RwLock;
+use std::time::Instant;
 
 /// Ensures the 500,000-cycle process-wide `GLOBAL_LIVE_BYTES` soak measurement runs with exclusive
 /// allocator isolation while keeping concurrent `proptest` suites parallel under a shared read lock.
@@ -168,7 +168,11 @@ fn run_fuzz_sequence_with_wal_replay(
 
     // Seed initial balances across 8 accounts
     for acc in 1..=8u64 {
-        for (asset, units) in [("USDT", 2_000_000u128), ("BTC", 5_000u128), ("ETH", 50_000u128)] {
+        for (asset, units) in [
+            ("USDT", 2_000_000u128),
+            ("BTC", 5_000u128),
+            ("ETH", 50_000u128),
+        ] {
             eng.execute_deposit_proto(CreditDepositRequest {
                 deposit_id: format!("init-{acc}-{asset}"),
                 account_id: acc,
@@ -363,7 +367,10 @@ fn run_fuzz_sequence_with_wal_replay(
 
     let report = WalReader::verify_segment_strict(&wal_path).expect("strict WAL verification");
     assert!(!report.truncated_corrupt_tail);
-    assert_eq!(report.frames.last().map(|f| f.engine_seq).unwrap_or(0), live_seq);
+    assert_eq!(
+        report.frames.last().map(|f| f.engine_seq).unwrap_or(0),
+        live_seq
+    );
 
     let mut replayed = DeterministicExchangeEngine::new_in_memory(sizing);
     replayed.set_instrument_fees(1, "BTC-USDT", maker_fee_ppm, taker_fee_ppm);

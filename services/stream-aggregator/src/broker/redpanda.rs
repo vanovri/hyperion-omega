@@ -132,8 +132,11 @@ impl AggregatePublisher for RedpandaAggregatePublisher {
                     );
                     headers.insert(
                         "traceparent".to_string(),
-                        format!("00-{:032x}-{:016x}-01", c.bucket_open_ts_ns, c.last_engine_seq)
-                            .into_bytes(),
+                        format!(
+                            "00-{:032x}-{:016x}-01",
+                            c.bucket_open_ts_ns, c.last_engine_seq
+                        )
+                        .into_bytes(),
                     );
 
                     grouped.entry(part).or_default().push(Record {

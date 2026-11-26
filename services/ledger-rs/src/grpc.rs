@@ -136,9 +136,9 @@ impl LmaxDisruptorHandle {
                             DisruptorCommand::Submit { req, reply } => {
                                 metrics_clone.submit_total.fetch_add(1, Ordering::Relaxed);
                                 let res = match req.order {
-                                    Some(ord) => engine
-                                        .execute_submit_proto(ord)
-                                        .map_err(|e| e.to_string()),
+                                    Some(ord) => {
+                                        engine.execute_submit_proto(ord).map_err(|e| e.to_string())
+                                    }
                                     None => Err("missing SubmitOrder payload".to_string()),
                                 };
                                 if let Ok(ack) = &res {
@@ -161,9 +161,9 @@ impl LmaxDisruptorHandle {
                             DisruptorCommand::Cancel { req, reply } => {
                                 metrics_clone.cancel_total.fetch_add(1, Ordering::Relaxed);
                                 let res = match req.cancel {
-                                    Some(c) => engine
-                                        .execute_cancel_proto(c)
-                                        .map_err(|e| e.to_string()),
+                                    Some(c) => {
+                                        engine.execute_cancel_proto(c).map_err(|e| e.to_string())
+                                    }
                                     None => Err("missing CancelOrder payload".to_string()),
                                 };
                                 if let Ok(ack) = &res {
@@ -177,9 +177,9 @@ impl LmaxDisruptorHandle {
                             DisruptorCommand::Modify { req, reply } => {
                                 metrics_clone.modify_total.fetch_add(1, Ordering::Relaxed);
                                 let res = match req.modify {
-                                    Some(m) => engine
-                                        .execute_modify_proto(m)
-                                        .map_err(|e| e.to_string()),
+                                    Some(m) => {
+                                        engine.execute_modify_proto(m).map_err(|e| e.to_string())
+                                    }
                                     None => Err("missing ModifyOrder payload".to_string()),
                                 };
                                 if let Ok(ack) = &res {
@@ -226,10 +226,8 @@ impl LmaxDisruptorHandle {
                                 let _ = reply.send(res);
                             }
                             DisruptorCommand::FlushWal { reply } => {
-                                let res = engine
-                                    .wal_mut()
-                                    .flush_and_sync()
-                                    .map_err(|e| e.to_string());
+                                let res =
+                                    engine.wal_mut().flush_and_sync().map_err(|e| e.to_string());
                                 let _ = reply.send(res);
                             }
                             DisruptorCommand::Shutdown => {
@@ -615,12 +613,14 @@ impl OrderbookService for HyperionOrderbookGrpcService {
                         if env.engine_seq < req.from_engine_seq {
                             continue;
                         }
-                        if !req.symbols.is_empty() && !req.symbols.iter().any(|s| s == &env.symbol) {
+                        if !req.symbols.is_empty() && !req.symbols.iter().any(|s| s == &env.symbol)
+                        {
                             continue;
                         }
                         let keep = match &env.payload {
                             Some(market_event_envelope::Payload::L3Delta(_)) => {
-                                req.include_l3_deltas || (!req.include_l3_deltas && !req.include_fills)
+                                req.include_l3_deltas
+                                    || (!req.include_l3_deltas && !req.include_fills)
                             }
                             Some(market_event_envelope::Payload::Fill(_)) => {
                                 req.include_fills || (!req.include_l3_deltas && !req.include_fills)

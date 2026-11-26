@@ -72,7 +72,9 @@ impl DeterministicWatermark {
             self.reordered_events_count += 1;
         } else {
             self.max_event_ts_ns = event_ts_ns;
-            let candidate = self.max_event_ts_ns.saturating_sub(self.allowed_lateness_ns);
+            let candidate = self
+                .max_event_ts_ns
+                .saturating_sub(self.allowed_lateness_ns);
             if candidate > self.watermark_ts_ns {
                 self.watermark_ts_ns = candidate;
             }
@@ -187,8 +189,7 @@ impl<T: Clone + Serialize + for<'de> Deserialize<'de>> WatermarkReorderBuffer<T>
 
     /// Snapshot items without mutating the buffer (for transactional checkpoint persistence).
     pub fn snapshot_items(&self) -> Vec<SequencedItem<T>> {
-        let mut items: Vec<SequencedItem<T>> =
-            self.heap.iter().map(|r| r.0.clone()).collect();
+        let mut items: Vec<SequencedItem<T>> = self.heap.iter().map(|r| r.0.clone()).collect();
         items.sort();
         items
     }

@@ -66,9 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!(%grpc_addr, %http_addr, "HYPERION Chronos Time-Travel & Counterfactual Engine online");
 
     let http_listener = tokio::net::TcpListener::bind(http_addr).await?;
-    let http_task = tokio::spawn(async move {
-        axum::serve(http_listener, http_router).await
-    });
+    let http_task = tokio::spawn(async move { axum::serve(http_listener, http_router).await });
 
     let grpc_task = tokio::spawn(async move {
         TonicServer::builder()

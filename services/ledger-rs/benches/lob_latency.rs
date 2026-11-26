@@ -1,7 +1,4 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::cell::Cell;
-use std::time::Instant;
 use ledger_rs::arena_lob::{InstrumentOrderBook, OrderKind, OrderRecord, Side, StpPolicy};
 use ledger_rs::bench_passes::{BaselineHeapBook, HeapOrder, Pass2MonolithicSlabBook};
 use ledger_rs::engine::{
@@ -9,6 +6,9 @@ use ledger_rs::engine::{
 };
 use ledger_rs::fixed::{AssetSymbol, ClientOrderId, InstrumentSymbol, FP_SCALE_U64};
 use ledger_rs::merkle::LobStateAccumulator;
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
+use std::time::Instant;
 
 struct BenchTrackingAlloc;
 
@@ -147,8 +147,7 @@ fn run_percentile_and_3pass_telemetry_report() {
 
     // Pass 3: 64-Byte Cache-Line Aligned Hot/Cold Arena + Intrusive AA-Tree + Threaded Levels + Single-Block LtHash
     {
-        let mut book =
-            InstrumentOrderBook::new(1, "BTC-USDT", "BTC", "USDT", N + 1024, 4096);
+        let mut book = InstrumentOrderBook::new(1, "BTC-USDT", "BTC", "USDT", N + 1024, 4096);
         let mut lob_acc = LobStateAccumulator::new();
         let cid = ClientOrderId::from_str_trunc("ord-aligned-0001");
         let mut samples = Vec::with_capacity(N);

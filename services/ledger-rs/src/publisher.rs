@@ -232,7 +232,9 @@ impl Default for PublisherMetrics {
 
 /// Converts a raw `OutboundRingEvent` popped from the wait-free SPSC ring into both a
 /// `MarketEventEnvelope` (for gRPC `StreamMarketEvents`) and a `PublishedKafkaRecord` (for Redpanda).
-pub fn convert_outbound_event(ev: &OutboundRingEvent) -> (MarketEventEnvelope, PublishedKafkaRecord) {
+pub fn convert_outbound_event(
+    ev: &OutboundRingEvent,
+) -> (MarketEventEnvelope, PublishedKafkaRecord) {
     let trace_id_hex = |seq: u64| format!("00-{:032x}-{:016x}-01", seq as u128, seq);
 
     match ev {
@@ -355,7 +357,9 @@ pub fn spawn_async_redpanda_publisher(
                         metrics.published_l3_total.fetch_add(1, Ordering::Relaxed);
                     }
                     OutboundRingEvent::Fill(_) => {
-                        metrics.published_fills_total.fetch_add(1, Ordering::Relaxed);
+                        metrics
+                            .published_fills_total
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                     OutboundRingEvent::Journal { .. } => {
                         metrics
@@ -371,17 +375,22 @@ pub fn spawn_async_redpanda_publisher(
 
                 if let Some(addr) = &broker_addr {
                     if tcp_conn.is_none() {
-                        if let Ok(Ok(stream)) =
-                            tokio::time::timeout(Duration::from_millis(75), TcpStream::connect(addr))
-                                .await
+                        if let Ok(Ok(stream)) = tokio::time::timeout(
+                            Duration::from_millis(75),
+                            TcpStream::connect(addr),
+                        )
+                        .await
                         {
                             let _ = stream.set_nodelay(true);
                             tcp_conn = Some(stream);
                         }
                     }
                     if let Some(stream) = &mut tcp_conn {
-                        let wire =
-                            encode_kafka_produce_request_v3(corr_id, "hyperion-ledger-rs", &kafka_rec);
+                        let wire = encode_kafka_produce_request_v3(
+                            corr_id,
+                            "hyperion-ledger-rs",
+                            &kafka_rec,
+                        );
                         corr_id = corr_id.wrapping_add(1).max(1);
                         let send_ok = match stream.write_all(&wire).await {
                             Ok(()) => match tokio::time::timeout(

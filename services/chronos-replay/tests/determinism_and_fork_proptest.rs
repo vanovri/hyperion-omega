@@ -4,8 +4,7 @@ use std::sync::Arc;
 use chronos_replay::merkle::{verify_merkle_proof, ProofStep};
 use chronos_replay::pb::{
     chronos_replay_service_client::ChronosReplayServiceClient,
-    market_event_envelope::Payload as EnvelopePayload,
-    time_travel_seek_request::Target,
+    market_event_envelope::Payload as EnvelopePayload, time_travel_seek_request::Target,
     AccountPolicyOverride, AccountStatus, ControlReplaySessionRequest, L3BookDelta, L3DeltaOp,
     LedgerEntryLine, LedgerJournalEntry, MarketEventEnvelope, OrderSide, OrderType,
     ReplayControlAction, SelfTradePreventionMode, SimulationPolicyOverride,
@@ -260,10 +259,7 @@ proptest! {
     }
 }
 
-fn find_clean_batch_boundary_before(
-    events: &[chronos_replay::IndexedWalEvent],
-    idx: usize,
-) -> u64 {
+fn find_clean_batch_boundary_before(events: &[chronos_replay::IndexedWalEvent], idx: usize) -> u64 {
     if idx == 0 {
         return 0;
     }
@@ -347,7 +343,10 @@ fn test_wal_and_snapshot_cryptographic_tamper_detection() {
     let mut bad_magic = valid_bytes.to_vec();
     bad_magic[0] ^= 0xFF;
     let err = ChronosWalStore::from_backings_and_snapshots(
-        vec![(None, chronos_replay::wal::SegmentBacking::Memory(bad_magic.into()))],
+        vec![(
+            None,
+            chronos_replay::wal::SegmentBacking::Memory(bad_magic.into()),
+        )],
         vec![],
         4,
     );
@@ -358,7 +357,10 @@ fn test_wal_and_snapshot_cryptographic_tamper_detection() {
     let last_idx = bad_crc.len() - 1;
     bad_crc[last_idx] ^= 0x01;
     let err_crc = ChronosWalStore::from_backings_and_snapshots(
-        vec![(None, chronos_replay::wal::SegmentBacking::Memory(bad_crc.into()))],
+        vec![(
+            None,
+            chronos_replay::wal::SegmentBacking::Memory(bad_crc.into()),
+        )],
         vec![],
         4,
     );
@@ -375,7 +377,10 @@ fn test_wal_and_snapshot_cryptographic_tamper_detection() {
         vec![],
         4,
     );
-    assert!(matches!(err_b3, Err(ChronosError::WalBlake3Mismatch { .. })));
+    assert!(matches!(
+        err_b3,
+        Err(ChronosError::WalBlake3Mismatch { .. })
+    ));
 
     // 4. Corrupt HYPSNP01 snapshot CRC & state root
     let mut st = ExchangeState::new();
@@ -791,7 +796,6 @@ async fn test_grpc_and_http_vcr_streaming_controls_end_to_end() {
     assert!(buf.contains("\"state_root_blake3\""));
 }
 
-
 #[test]
 fn test_ch02_ledger_snapshot_v1_and_tail_wal_bit_identical_state_root() {
     use chronos_replay::wal::{
@@ -923,8 +927,11 @@ fn test_ch02_ledger_snapshot_v1_and_tail_wal_bit_identical_state_root() {
     snap_file_bytes.extend_from_slice(&snap_root);
     snap_file_bytes.extend_from_slice(&(payload_bytes.len() as u64).to_le_bytes());
     snap_file_bytes.extend_from_slice(&payload_bytes);
-    std::fs::write(snap_dir.join("snap_0000000000000010.snap"), &snap_file_bytes)
-        .expect("write ch02 snap");
+    std::fs::write(
+        snap_dir.join("snap_0000000000000010.snap"),
+        &snap_file_bytes,
+    )
+    .expect("write ch02 snap");
 
     // Append compacted tail WAL starting at seq 11 anchored to `anchor_wal_hash`
     let mut tail_writer = WalSegmentWriter::with_chain_anchor(11, anchor_wal_hash);
@@ -1025,7 +1032,10 @@ fn test_exact_boundary_invariants_for_math_merkle_wal_and_sandbox() {
     use chronos_replay::wal::{parse_wal_segment_header, SparseIndexEntry, SparseWalIndex};
 
     // 1. Fixed-point math & exact boundaries
-    assert_eq!(checked_notional_fp(6_800_000_000_000, 100_000_000).unwrap(), 6_800_000_000_000);
+    assert_eq!(
+        checked_notional_fp(6_800_000_000_000, 100_000_000).unwrap(),
+        6_800_000_000_000
+    );
     assert_eq!(checked_fee_fp(1_000_000_000_000, 500).unwrap(), 500_000_000);
     assert_eq!(checked_fee_fp(1_000_000_000_000, -50).unwrap(), -50_000_000);
     assert_eq!(
@@ -1043,12 +1053,16 @@ fn test_exact_boundary_invariants_for_math_merkle_wal_and_sandbox() {
     assert_eq!(isqrt_u128(10_000_000_000_000_000), 100_000_000);
     // Volatility for len == 2 must be computed (> 0 when returns differ across 3 or == 0 for 1 return, wait: for 2 prices [100, 110] variance of 1 sample is 0, wait: what distinguishes len < 2 vs len <= 2? Wait: for 2 prices there is 1 return so variance around its own mean is 0! Let's check!)
     assert_eq!(compute_realized_volatility_bps(&[10_000_000_000]), 0);
-    assert!(
-        compute_realized_volatility_bps(&[10_000_000_000, 10_200_000_000, 9_800_000_000]) > 0
+    assert!(compute_realized_volatility_bps(&[10_000_000_000, 10_200_000_000, 9_800_000_000]) > 0);
+    assert_eq!(
+        compute_slippage_bps(10_000_000_000, 10_050_000_000, true),
+        50
     );
-    assert_eq!(compute_slippage_bps(10_000_000_000, 10_050_000_000, true), 50);
     assert_eq!(compute_slippage_bps(10_000_000_000, 9_950_000_000, true), 0);
-    assert_eq!(compute_slippage_bps(10_000_000_000, 9_950_000_000, false), 50);
+    assert_eq!(
+        compute_slippage_bps(10_000_000_000, 9_950_000_000, false),
+        50
+    );
 
     // 2. Merkle proof left/right verification, explicit RFC/domain-separation byte 0x01, & LtHash cancel symmetry
     let left = [0x11u8; 32];
@@ -1152,7 +1166,10 @@ fn test_exact_boundary_invariants_for_math_merkle_wal_and_sandbox() {
     st.insert_resting_order_raw(1, "b1", 1, "BTC-USDT", 1, 1, 100_000_000, 10_000, 0, 1, 100);
     st.insert_resting_order_raw(2, "a1", 1, "BTC-USDT", 2, 2, 105_000_000, 10_000, 0, 2, 101);
     assert!(st.is_book_uncrossed("BTC-USDT"));
-    assert_eq!(st.compute_liquidity_metrics("BTC-USDT").spread_fp, 5_000_000);
+    assert_eq!(
+        st.compute_liquidity_metrics("BTC-USDT").spread_fp,
+        5_000_000
+    );
     // Insert ask at exact same price 100_000_000 -> book is now crossed (`bid == ask`)!
     st.insert_resting_order_raw(3, "a2", 1, "BTC-USDT", 2, 2, 100_000_000, 10_000, 0, 3, 102);
     assert!(!st.is_book_uncrossed("BTC-USDT"));
@@ -1160,7 +1177,8 @@ fn test_exact_boundary_invariants_for_math_merkle_wal_and_sandbox() {
     // 5. Engine exact boundaries: `end_seq == start_seq`, `qty_fp == max_qty`, `cur_seq == effective_from_seq`, `best_ask == limit_px`
     let mut rec = HistoricalTimelineRecorder::new(0, 100, 500);
     rec.record_deposit(1, "BTC", 100_000_000, 1000).unwrap();
-    rec.record_deposit(2, "USDT", 10_000_000_000_000, 1001).unwrap();
+    rec.record_deposit(2, "USDT", 10_000_000_000_000, 1001)
+        .unwrap();
     let ask_seq = rec
         .record_submit_order(
             1,

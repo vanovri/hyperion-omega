@@ -21,9 +21,9 @@ use crate::merkle::{
 };
 use crate::pb::{
     market_event_envelope::Payload as EnvelopePayload, time_travel_seek_request::Target,
-    AccountBalanceDiff, AccountPolicyOverride, AccountStatus, ExecutionFill,
-    L3BookDelta, L3DeltaOp, LedgerEntryLine, LedgerJournalEntry, MarketEventEnvelope, MarketRegime,
-    OrderSide, OrderType, PriceLevelDiff, SelfTradePreventionMode, SimulationPolicyOverride,
+    AccountBalanceDiff, AccountPolicyOverride, AccountStatus, ExecutionFill, L3BookDelta,
+    L3DeltaOp, LedgerEntryLine, LedgerJournalEntry, MarketEventEnvelope, MarketRegime, OrderSide,
+    OrderType, PriceLevelDiff, SelfTradePreventionMode, SimulationPolicyOverride,
     StateTreeDiffResponse, TimeTravelSeekRequest, TimeTravelSeekResponse, TimelineForkRequest,
     TraceMetadata,
 };
@@ -54,7 +54,7 @@ pub enum ReplayCommand {
         account_id: u64,
         symbol: String,
         instrument_id: u32,
-        side: u8,       // 1 = BUY, 2 = SELL
+        side: u8,        // 1 = BUY, 2 = SELL
         order_type: i32, // OrderType proto enum
         stp_mode: i32,   // SelfTradePreventionMode proto enum
         price_fp: u64,
@@ -363,9 +363,9 @@ impl ChronosEngine {
             .find_book(&symbol)
             .map(|b| b.last_clearing_price_fp)
             .unwrap_or(0);
-        let clearing_price_delta_fp =
-            (forked_clearing_price_fp as i128 - baseline_clearing_price_fp as i128)
-                .clamp(i64::MIN as i128, i64::MAX as i128) as i64;
+        let clearing_price_delta_fp = (forked_clearing_price_fp as i128
+            - baseline_clearing_price_fp as i128)
+            .clamp(i64::MIN as i128, i64::MAX as i128) as i64;
 
         let baseline_volatility_bps = baseline_state.window_realized_volatility_bps();
         let forked_volatility_bps = sandbox_state.window_realized_volatility_bps();
@@ -533,7 +533,11 @@ impl<'a> CounterfactualSandbox<'a> {
         }
     }
 
-    fn activate_due_account_overrides(&mut self, cur_seq: u64, cur_ts_ns: u64) -> Result<(), ChronosError> {
+    fn activate_due_account_overrides(
+        &mut self,
+        cur_seq: u64,
+        cur_ts_ns: u64,
+    ) -> Result<(), ChronosError> {
         let mut to_cancel_accounts: Vec<u64> = Vec::new();
         let mut status_updates: Vec<(u64, i32)> = Vec::new();
 
@@ -571,7 +575,11 @@ impl<'a> CounterfactualSandbox<'a> {
         Ok(())
     }
 
-    fn cancel_all_orders_for_account(&mut self, account_id: u64, ts_ns: u64) -> Result<(), ChronosError> {
+    fn cancel_all_orders_for_account(
+        &mut self,
+        account_id: u64,
+        ts_ns: u64,
+    ) -> Result<(), ChronosError> {
         let order_ids: Vec<u64> = self
             .state
             .hot_orders
@@ -589,8 +597,11 @@ impl<'a> CounterfactualSandbox<'a> {
                     spec.base_asset
                 };
                 if cold.locked_collateral_fp > 0 {
-                    self.state
-                        .unlock_funds(hot.account_id, unlock_asset, cold.locked_collateral_fp)?;
+                    self.state.unlock_funds(
+                        hot.account_id,
+                        unlock_asset,
+                        cold.locked_collateral_fp,
+                    )?;
                 }
                 self.emit_vcr_event(
                     ts_ns,
@@ -636,7 +647,8 @@ impl<'a> CounterfactualSandbox<'a> {
             }
         }
         let encoded = env.encode_to_vec();
-        let frame_hash = crate::wal::compute_wal_frame_blake3(seq, ts_ns, &self.prev_blake3, &encoded);
+        let frame_hash =
+            crate::wal::compute_wal_frame_blake3(seq, ts_ns, &self.prev_blake3, &encoded);
         let prev = self.prev_blake3;
         self.prev_blake3 = frame_hash;
         self.emitted_events.push(IndexedWalEvent {
@@ -740,7 +752,7 @@ impl<'a> CounterfactualSandbox<'a> {
                     self.rejected_orders_count += 1;
                     return Ok(());
                 }
-                if let Some( max_qty ) = self.policy.and_then(|p| p.max_order_qty_fp_override) {
+                if let Some(max_qty) = self.policy.and_then(|p| p.max_order_qty_fp_override) {
                     if *new_qty_fp > max_qty {
                         self.rejected_orders_count += 1;
                         return Ok(());
@@ -754,8 +766,11 @@ impl<'a> CounterfactualSandbox<'a> {
                         spec.base_asset
                     };
                     if cold.locked_collateral_fp > 0 {
-                        self.state
-                            .unlock_funds(hot.account_id, unlock_asset, cold.locked_collateral_fp)?;
+                        self.state.unlock_funds(
+                            hot.account_id,
+                            unlock_asset,
+                            cold.locked_collateral_fp,
+                        )?;
                     }
                     if *new_qty_fp > 0 {
                         let maker_ppm = self
@@ -767,7 +782,12 @@ impl<'a> CounterfactualSandbox<'a> {
                             .and_then(|p| p.taker_fee_ppm_override)
                             .unwrap_or(self.state.taker_fee_ppm);
                         let new_lock = if hot.side == 1 {
-                            checked_buyer_reserve_fp(*new_price_fp, *new_qty_fp, maker_ppm, taker_ppm)?
+                            checked_buyer_reserve_fp(
+                                *new_price_fp,
+                                *new_qty_fp,
+                                maker_ppm,
+                                taker_ppm,
+                            )?
                         } else {
                             *new_qty_fp as i128
                         };
@@ -1049,7 +1069,10 @@ impl<'a> CounterfactualSandbox<'a> {
             if lock_price_cap > 0 {
                 let needed =
                     checked_buyer_reserve_fp(lock_price_cap, qty_fp, maker_ppm, taker_ppm)?;
-                if !self.state.lock_funds(account_id, spec.quote_asset, needed)? {
+                if !self
+                    .state
+                    .lock_funds(account_id, spec.quote_asset, needed)?
+                {
                     self.rejected_orders_count += 1;
                     return Ok(());
                 }
@@ -1438,10 +1461,13 @@ pub fn extract_commands_from_wal_slice(
         if let Some(tag_cmd) = try_extract_tagged_command(&ev.envelope) {
             commands.push(tag_cmd);
             // Skip companion frames belonging to the same tagged correlation batch
-            let corr = extract_correlation_id(&ev.envelope).unwrap_or("").to_string();
+            let corr = extract_correlation_id(&ev.envelope)
+                .unwrap_or("")
+                .to_string();
             i += 1;
             while i < events.len() {
-                let is_same_corr = extract_correlation_id(&events[i].envelope) == Some(corr.as_str());
+                let is_same_corr =
+                    extract_correlation_id(&events[i].envelope) == Some(corr.as_str());
                 let is_companion_journal = matches!(
                     &events[i].envelope.payload,
                     Some(EnvelopePayload::JournalEntry(j))
@@ -1520,9 +1546,7 @@ pub fn extract_commands_from_wal_slice(
                             };
                             i += 1;
                         }
-                        Some(EnvelopePayload::L3Delta(d))
-                            if d.op == L3DeltaOp::Fill as i32 =>
-                        {
+                        Some(EnvelopePayload::L3Delta(d)) if d.op == L3DeltaOp::Fill as i32 => {
                             i += 1;
                         }
                         Some(EnvelopePayload::L3Delta(d))
@@ -1879,7 +1903,8 @@ fn compute_l2_level_diffs(
             .and_then(|f| f.find_level_idx(1, px).ok().map(|i| f.bids[i].total_qty_fp))
             .unwrap_or(0);
         if b_qty != f_qty {
-            let delta = (f_qty as i128 - b_qty as i128).clamp(i64::MIN as i128, i64::MAX as i128) as i64;
+            let delta =
+                (f_qty as i128 - b_qty as i128).clamp(i64::MIN as i128, i64::MAX as i128) as i64;
             out.push(PriceLevelDiff {
                 side: OrderSide::Buy as i32,
                 price_fp: px,
@@ -1909,7 +1934,8 @@ fn compute_l2_level_diffs(
             .and_then(|f| f.find_level_idx(2, px).ok().map(|i| f.asks[i].total_qty_fp))
             .unwrap_or(0);
         if b_qty != f_qty {
-            let delta = (f_qty as i128 - b_qty as i128).clamp(i64::MIN as i128, i64::MAX as i128) as i64;
+            let delta =
+                (f_qty as i128 - b_qty as i128).clamp(i64::MIN as i128, i64::MAX as i128) as i64;
             out.push(PriceLevelDiff {
                 side: OrderSide::Sell as i32,
                 price_fp: px,
@@ -2101,14 +2127,20 @@ impl HistoricalTimelineRecorder {
         if is_buy {
             if price_fp > 0 {
                 let reserve = checked_buyer_reserve_fp(price_fp, qty_fp, maker_ppm, taker_ppm)?;
-                if !self.state.lock_funds(account_id, spec.quote_asset, reserve)? {
+                if !self
+                    .state
+                    .lock_funds(account_id, spec.quote_asset, reserve)?
+                {
                     return Ok(self.state.engine_seq);
                 }
                 remaining_locked_fp = reserve;
             }
         } else {
             let reserve = qty_fp as i128;
-            if !self.state.lock_funds(account_id, spec.base_asset, reserve)? {
+            if !self
+                .state
+                .lock_funds(account_id, spec.base_asset, reserve)?
+            {
                 return Ok(self.state.engine_seq);
             }
             remaining_locked_fp = reserve;
@@ -2202,12 +2234,8 @@ impl HistoricalTimelineRecorder {
                 if new_taker_rem == 0 {
                     remaining_locked_fp
                 } else if is_buy {
-                    let keep = checked_buyer_reserve_fp(
-                        price_fp,
-                        new_taker_rem,
-                        maker_ppm,
-                        taker_ppm,
-                    )?;
+                    let keep =
+                        checked_buyer_reserve_fp(price_fp, new_taker_rem, maker_ppm, taker_ppm)?;
                     remaining_locked_fp.saturating_sub(keep)
                 } else {
                     match_qty as i128
@@ -2297,7 +2325,13 @@ impl HistoricalTimelineRecorder {
                 wal_blake3_hash: Vec::new(),
                 trace: None,
             };
-            pending_fills.push((fill, maker_hot.order_id, maker_hot.side, new_maker_rem, match_qty));
+            pending_fills.push((
+                fill,
+                maker_hot.order_id,
+                maker_hot.side,
+                new_maker_rem,
+                match_qty,
+            ));
         }
 
         let rests = rem_qty > 0
@@ -2560,8 +2594,10 @@ impl HistoricalTimelineRecorder {
             let mut lines = Vec::new();
             for acc_id in touched_accounts {
                 let a_idx = self.state.ensure_account(acc_id);
-                let existing_assets: Vec<crate::merkle::AssetBalanceLeaf> =
-                    self.state.accounts[a_idx as usize].sorted_balances().to_vec();
+                let existing_assets: Vec<crate::merkle::AssetBalanceLeaf> = self.state.accounts
+                    [a_idx as usize]
+                    .sorted_balances()
+                    .to_vec();
                 for bal in existing_assets {
                     lines.push(LedgerEntryLine {
                         account_id: acc_id,
@@ -2581,7 +2617,9 @@ impl HistoricalTimelineRecorder {
                     });
                 }
             }
-            let treasury_q = self.state.quote_treasury_fee_pool(spec.quote_asset.as_str());
+            let treasury_q = self
+                .state
+                .quote_treasury_fee_pool(spec.quote_asset.as_str());
             lines.push(LedgerEntryLine {
                 account_id: 0,
                 asset: spec.quote_asset.as_str().to_string(),
@@ -2721,7 +2759,10 @@ impl HistoricalTimelineRecorder {
         Ok(self.state.engine_seq)
     }
 
-    pub fn build_store(mut self, sparse_stride: usize) -> Result<(ChronosWalStore, ExchangeState), ChronosError> {
+    pub fn build_store(
+        mut self,
+        sparse_stride: usize,
+    ) -> Result<(ChronosWalStore, ExchangeState), ChronosError> {
         if self.frames_in_current_segment > 0 {
             self.segments
                 .push((None, SegmentBacking::Memory(self.writer.finish_bytes())));
@@ -2952,7 +2993,11 @@ pub fn reconstruct_pass1_baseline(events: &[IndexedWalEvent]) -> Result<[u8; 32]
     for ev in events {
         match &ev.envelope.payload {
             Some(EnvelopePayload::L3Delta(d)) => {
-                let side = if d.side == OrderSide::Sell as i32 { 2 } else { 1 };
+                let side = if d.side == OrderSide::Sell as i32 {
+                    2
+                } else {
+                    1
+                };
                 let op = L3DeltaOp::try_from(d.op).unwrap_or(L3DeltaOp::Unspecified);
                 match op {
                     L3DeltaOp::Add => {
@@ -3174,7 +3219,11 @@ pub fn reconstruct_pass2_zerocopy(events: &[IndexedWalEvent]) -> Result<[u8; 32]
     for ev in events {
         match &ev.envelope.payload {
             Some(EnvelopePayload::L3Delta(d)) => {
-                let side = if d.side == OrderSide::Sell as i32 { 2 } else { 1 };
+                let side = if d.side == OrderSide::Sell as i32 {
+                    2
+                } else {
+                    1
+                };
                 let op = L3DeltaOp::try_from(d.op).unwrap_or(L3DeltaOp::Unspecified);
                 match op {
                     L3DeltaOp::Add if d.remaining_qty_fp > 0 => {

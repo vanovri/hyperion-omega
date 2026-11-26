@@ -6,7 +6,7 @@ use hyperion_proto::stream_analytics_service_server::{
 use hyperion_proto::{
     GetCandlesRequest, GetCandlesResponse, GetLatestMicrostructureRequest,
     GetLatestMicrostructureResponse, GetLiquidityHeatmapRequest, GetLiquidityHeatmapResponse,
-    GetVolumeProfileRequest, GetVolumeProfileResponse, I128, MicrostructureMetrics,
+    GetVolumeProfileRequest, GetVolumeProfileResponse, MicrostructureMetrics, I128,
 };
 use std::sync::atomic::Ordering;
 use tonic::{Request, Response, Status};

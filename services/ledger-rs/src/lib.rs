@@ -12,4 +12,3 @@ pub mod wal;
 
 #[cfg(test)]
 mod unit_tests;
-

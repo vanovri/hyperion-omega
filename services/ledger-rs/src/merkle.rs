@@ -405,7 +405,8 @@ impl IncrementalMerkleState {
             *slot = empty_leaf_hash;
         }
         for idx in (1..ACCOUNT_BUCKET_COUNT).rev() {
-            account_tree[idx] = hash_merkle_branch(&account_tree[idx * 2], &account_tree[idx * 2 + 1]);
+            account_tree[idx] =
+                hash_merkle_branch(&account_tree[idx * 2], &account_tree[idx * 2 + 1]);
         }
         let buckets = vec![AccountBucket::default(); ACCOUNT_BUCKET_COUNT].into_boxed_slice();
         let lob_empty_acc = LobStateAccumulator::new();
@@ -458,7 +459,8 @@ impl IncrementalMerkleState {
         self.cached_lob_lanes = lob_empty_acc.lanes();
         self.cached_lob_hash = lob_empty_acc.commitment_hash();
         self.cached_right_branch = hash_merkle_branch(&self.cached_lob_hash, &self.empty_leaf_hash);
-        self.cached_state_root = hash_merkle_branch(&self.account_tree[1], &self.cached_right_branch);
+        self.cached_state_root =
+            hash_merkle_branch(&self.account_tree[1], &self.cached_right_branch);
     }
 
     /// Marks an account leaf updated without recomputing parent hashes yet (coalesced per command).
@@ -647,15 +649,21 @@ impl IncrementalMerkleState {
         let entries = self.buckets[b_idx].as_slice();
 
         let (leaf_hash, mut proof) = if entries.is_empty() {
-            (self.empty_leaf_hash, Vec::with_capacity(ACCOUNT_BUCKET_BITS + 2))
+            (
+                self.empty_leaf_hash,
+                Vec::with_capacity(ACCOUNT_BUCKET_BITS + 2),
+            )
         } else if entries.len() == 1 && entries[0].0 == account_id {
             (entries[0].1, Vec::with_capacity(ACCOUNT_BUCKET_BITS + 1))
         } else {
             match entries.binary_search_by_key(&account_id, |&(id, _)| id) {
                 Ok(pos) => {
                     let hashes: Vec<[u8; 32]> = entries.iter().map(|&(_, h)| h).collect();
-                    let (_, sub_proof) =
-                        build_local_subtree_root_and_proof(&hashes, Some(pos), &self.empty_leaf_hash);
+                    let (_, sub_proof) = build_local_subtree_root_and_proof(
+                        &hashes,
+                        Some(pos),
+                        &self.empty_leaf_hash,
+                    );
                     (entries[pos].1, sub_proof)
                 }
                 Err(_) => (self.empty_leaf_hash, Vec::new()),

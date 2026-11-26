@@ -60,7 +60,7 @@ type BotAccount struct {
 	PrivKey    ed25519.PrivateKey
 	PubKey     ed25519.PublicKey
 	HMACSecret [32]byte
-	_pad       [64]byte // Prevents L1 cache-line false sharing across neighboring heap bots
+	_       [64]byte // Prevents L1 cache-line false sharing across neighboring heap bots
 }
 
 // NewBotAccount constructs a deterministic bot account with reproducible Ed25519 & HMAC keys.

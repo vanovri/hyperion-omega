@@ -172,7 +172,10 @@ pub fn compute_realized_volatility_bps(prices_fp: &[u64]) -> u32 {
         return 0;
     }
     let count = returns_ppm.len() as i128;
-    let sum: i128 = returns_ppm.iter().copied().fold(0i128, i128::saturating_add);
+    let sum: i128 = returns_ppm
+        .iter()
+        .copied()
+        .fold(0i128, i128::saturating_add);
     let mean = sum / count;
 
     let mut sq_sum: u128 = 0;
@@ -258,9 +261,10 @@ pub fn decode_hex_32(hex_str: &str) -> Result<[u8; 32], MathError> {
     let mut out = [0u8; 32];
     let raw = hex_str.as_bytes();
     for i in 0..32 {
-        let hi = hex_nibble(raw[2 * i]).ok_or_else(|| MathError::InvalidDecimal(hex_str.to_string()))?;
-        let lo =
-            hex_nibble(raw[2 * i + 1]).ok_or_else(|| MathError::InvalidDecimal(hex_str.to_string()))?;
+        let hi =
+            hex_nibble(raw[2 * i]).ok_or_else(|| MathError::InvalidDecimal(hex_str.to_string()))?;
+        let lo = hex_nibble(raw[2 * i + 1])
+            .ok_or_else(|| MathError::InvalidDecimal(hex_str.to_string()))?;
         out[i] = (hi << 4) | lo;
     }
     Ok(out)

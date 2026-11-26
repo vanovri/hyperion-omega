@@ -206,7 +206,11 @@ impl Pass2MonolithicSlabBook {
     pub fn with_capacity(cap: usize) -> Self {
         let mut slab = vec![UnalignedMonolithicNode::default(); cap].into_boxed_slice();
         for (i, n) in slab.iter_mut().enumerate() {
-            n.next = if i + 1 < cap { (i + 1) as u32 } else { NULL_IDX };
+            n.next = if i + 1 < cap {
+                (i + 1) as u32
+            } else {
+                NULL_IDX
+            };
         }
         Self {
             slab,

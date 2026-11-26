@@ -563,18 +563,20 @@ impl LedgerSnapshotPayloadV1 {
                 });
             }
             for b in acc.balances {
-                let avail: i128 = b.available_fp.parse().map_err(|e| {
-                    ChronosError::InvalidSnapshotPayload {
-                        engine_seq: self.engine_seq,
-                        reason: format!("invalid available_fp: {e}"),
-                    }
-                })?;
-                let locked: i128 = b.locked_fp.parse().map_err(|e| {
-                    ChronosError::InvalidSnapshotPayload {
-                        engine_seq: self.engine_seq,
-                        reason: format!("invalid locked_fp: {e}"),
-                    }
-                })?;
+                let avail: i128 =
+                    b.available_fp
+                        .parse()
+                        .map_err(|e| ChronosError::InvalidSnapshotPayload {
+                            engine_seq: self.engine_seq,
+                            reason: format!("invalid available_fp: {e}"),
+                        })?;
+                let locked: i128 =
+                    b.locked_fp
+                        .parse()
+                        .map_err(|e| ChronosError::InvalidSnapshotPayload {
+                            engine_seq: self.engine_seq,
+                            reason: format!("invalid locked_fp: {e}"),
+                        })?;
                 account_balances.push(SnapshotAccountBalance {
                     account_id: acc.account_id,
                     asset: b.asset,
@@ -586,12 +588,13 @@ impl LedgerSnapshotPayloadV1 {
 
         let mut asset_pools = Vec::with_capacity(self.asset_totals.len());
         for t in self.asset_totals {
-            let dep: u128 = t.total_deposits_fp.parse().map_err(|e| {
-                ChronosError::InvalidSnapshotPayload {
-                    engine_seq: self.engine_seq,
-                    reason: format!("invalid total_deposits_fp: {e}"),
-                }
-            })?;
+            let dep: u128 =
+                t.total_deposits_fp
+                    .parse()
+                    .map_err(|e| ChronosError::InvalidSnapshotPayload {
+                        engine_seq: self.engine_seq,
+                        reason: format!("invalid total_deposits_fp: {e}"),
+                    })?;
             let treas: i128 = t.treasury_fee_pool_fp.parse().map_err(|e| {
                 ChronosError::InvalidSnapshotPayload {
                     engine_seq: self.engine_seq,
@@ -734,7 +737,8 @@ pub fn parse_and_verify_snapshot(
         });
     }
     let payload_slice = &bytes[SNAPSHOT_HEADER_LEN..total_needed];
-    let computed_crc = compute_snapshot_crc32c(engine_seq, ts_ns, &state_root_blake3, payload_slice);
+    let computed_crc =
+        compute_snapshot_crc32c(engine_seq, ts_ns, &state_root_blake3, payload_slice);
     if computed_crc != expected_crc {
         return Err(ChronosError::SnapshotCrcMismatch {
             engine_seq,
@@ -745,7 +749,8 @@ pub fn parse_and_verify_snapshot(
 
     let payload = if payload_slice.first().copied() == Some(b'{') {
         if let Ok(ledger_v1) = serde_json::from_slice::<LedgerSnapshotPayloadV1>(payload_slice) {
-            if ledger_v1.engine_seq != engine_seq || ledger_v1.state_root_blake3 != state_root_blake3
+            if ledger_v1.engine_seq != engine_seq
+                || ledger_v1.state_root_blake3 != state_root_blake3
             {
                 return Err(ChronosError::SnapshotStateRootMismatch { engine_seq });
             }
@@ -1101,8 +1106,8 @@ impl ChronosWalStore {
             .unwrap_or(start_idx)
             .max(start_idx);
         let end_scan_limit = (approx_end + self.sparse_index.stride() + 1).min(self.events.len());
-        let end_rel = self.events[approx_end..end_scan_limit]
-            .partition_point(|e| e.engine_seq <= up_to_seq);
+        let end_rel =
+            self.events[approx_end..end_scan_limit].partition_point(|e| e.engine_seq <= up_to_seq);
         let end_idx = if approx_end + end_rel < end_scan_limit {
             approx_end + end_rel
         } else {
@@ -1129,8 +1134,7 @@ impl ChronosWalStore {
         {
             self.events.partition_point(|e| e.ts_ns <= target_ts_ns)
         } else {
-            approx
-                + self.events[approx..scan_end].partition_point(|e| e.ts_ns <= target_ts_ns)
+            approx + self.events[approx..scan_end].partition_point(|e| e.ts_ns <= target_ts_ns)
         };
         if pos == 0 {
             self.nearest_snapshot_for_ts_ns(target_ts_ns)
@@ -1143,7 +1147,10 @@ impl ChronosWalStore {
 
     /// Re-verifies raw segment bytes over `(after_seq, up_to_seq]` directly from `Mmap`/`Bytes`
     /// starting at the nearest `SparseWalIndex` anchor (on-demand cryptographic audit).
-    pub fn verify_raw_chain_up_to(&self, up_to_seq: u64) -> Result<ChainVerificationSummary, ChronosError> {
+    pub fn verify_raw_chain_up_to(
+        &self,
+        up_to_seq: u64,
+    ) -> Result<ChainVerificationSummary, ChronosError> {
         let mut verified_frames = 0u64;
         let mut first_seq = 0u64;
         let mut last_seq = 0u64;

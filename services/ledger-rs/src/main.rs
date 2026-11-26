@@ -1,6 +1,3 @@
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use ledger_rs::engine::{DeterministicExchangeEngine, EngineSizing};
 use ledger_rs::grpc::{
     spawn_health_and_metrics_http_server, HyperionOrderbookGrpcService, LmaxDisruptorHandle,
@@ -8,6 +5,9 @@ use ledger_rs::grpc::{
 use ledger_rs::publisher::{spawn_async_redpanda_publisher, PublisherMetrics};
 use ledger_rs::ring::spsc_channel;
 use ledger_rs::wal::WalSyncMode;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tonic::transport::Server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -22,8 +22,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_addr: std::net::SocketAddr = std::env::var("HYPERION_LEDGER_GRPC_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:50151".to_string())
         .parse()?;
-    let metrics_port = std::env::var("HYPERION_LEDGER_METRICS_PORT")
-        .unwrap_or_else(|_| "8082".to_string());
+    let metrics_port =
+        std::env::var("HYPERION_LEDGER_METRICS_PORT").unwrap_or_else(|_| "8082".to_string());
     let metrics_addr = format!("0.0.0.0:{metrics_port}");
     let data_dir = PathBuf::from(
         std::env::var("HYPERION_DATA_DIR").unwrap_or_else(|_| "./data/ledger".to_string()),

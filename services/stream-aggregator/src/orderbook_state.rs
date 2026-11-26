@@ -4,8 +4,8 @@ use crate::fixed_point::{
     FP_SCALE_I128,
 };
 use hyperion_proto::{
-    GetVolumeProfileResponse, I128, L2BookSnapshot, L3BookDelta, L3DeltaOp,
-    LiquidityHeatmapBucket, MicrostructureMetrics, OrderSide, U128, VolumeProfileBin,
+    GetVolumeProfileResponse, L2BookSnapshot, L3BookDelta, L3DeltaOp, LiquidityHeatmapBucket,
+    MicrostructureMetrics, OrderSide, VolumeProfileBin, I128, U128,
 };
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
@@ -220,7 +220,11 @@ pub struct SymbolMicrostructureState {
 }
 
 impl SymbolMicrostructureState {
-    pub fn new(symbol: impl Into<String>, heatmap_time_bucket_ns: u64, heatmap_columns: usize) -> Self {
+    pub fn new(
+        symbol: impl Into<String>,
+        heatmap_time_bucket_ns: u64,
+        heatmap_columns: usize,
+    ) -> Self {
         let sym = symbol.into();
         let spec = instrument_spec_for(&sym);
         let hm_cap = heatmap_columns.max(32);
@@ -333,7 +337,11 @@ impl SymbolMicrostructureState {
 
     #[inline(always)]
     pub fn session_vwap_fp(&self) -> u64 {
-        calc_vwap_fp(self.session_raw_pq_sum, self.session_qty_sum, self.mid_price_fp)
+        calc_vwap_fp(
+            self.session_raw_pq_sum,
+            self.session_qty_sum,
+            self.mid_price_fp,
+        )
     }
 
     #[inline(always)]
@@ -985,8 +993,7 @@ impl SymbolMicrostructureState {
                 }
                 self.vwap_ring[idx].raw_pq_sum =
                     self.vwap_ring[idx].raw_pq_sum.saturating_add(raw_pq);
-                self.vwap_ring[idx].qty_sum =
-                    self.vwap_ring[idx].qty_sum.saturating_add(qty_u128);
+                self.vwap_ring[idx].qty_sum = self.vwap_ring[idx].qty_sum.saturating_add(qty_u128);
                 self.rolling_raw_pq_sum = self.rolling_raw_pq_sum.saturating_add(raw_pq);
                 self.rolling_qty_sum = self.rolling_qty_sum.saturating_add(qty_u128);
             }
@@ -1212,7 +1219,9 @@ impl SymbolMicrostructureState {
             if !slice.occupied {
                 continue;
             }
-            let slice_end = slice.slice_open_ts_ns.saturating_add(VOLUME_PROFILE_SLICE_NS);
+            let slice_end = slice
+                .slice_open_ts_ns
+                .saturating_add(VOLUME_PROFILE_SLICE_NS);
             if slice_end < from_ts_ns || slice.slice_open_ts_ns > upper {
                 continue;
             }
@@ -1430,7 +1439,13 @@ mod tests {
             (500_000_000, 10_000_000),
         ];
         for (i, (px, qty)) in bins_data.into_iter().enumerate() {
-            vp_st.apply_execution_fill(1_000_000_000 + i as u64, (i + 1) as u64, px, qty, OrderSide::Buy);
+            vp_st.apply_execution_fill(
+                1_000_000_000 + i as u64,
+                (i + 1) as u64,
+                px,
+                qty,
+                OrderSide::Buy,
+            );
         }
         let vp = vp_st.query_volume_profile(0, u64::MAX, 100_000_000);
         assert_eq!(vp.poc_price_fp, 300_000_000);

@@ -5,7 +5,9 @@ use hyperion_stream_aggregator::engine::{
     CompactFill, CompactL3Delta, IngestEvent, StreamAggregatorEngine,
 };
 use hyperion_stream_aggregator::fixed_point::{calc_imbalance_ppm, calc_notional_fp, calc_vwap_fp};
-use hyperion_stream_aggregator::synthetic::{generate_ordered_market_stream, SyntheticStreamConfig};
+use hyperion_stream_aggregator::synthetic::{
+    generate_ordered_market_stream, SyntheticStreamConfig,
+};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -84,15 +86,10 @@ impl Pass1BaselineAggregator {
                 for tf in ALL_TIMEFRAMES {
                     let b = (f.exec_ts_ns / tf.duration_ns()) * tf.duration_ns();
                     let key = (f.symbol.clone(), tf.code(), b);
-                    let entry = self.candles.entry(key).or_insert((
-                        f.price_fp,
-                        f.price_fp,
-                        f.price_fp,
-                        f.price_fp,
-                        0,
-                        0,
-                        0,
-                    ));
+                    let entry = self
+                        .candles
+                        .entry(key)
+                        .or_insert((f.price_fp, f.price_fp, f.price_fp, f.price_fp, 0, 0, 0));
                     entry.1 = entry.1.max(f.price_fp);
                     entry.2 = entry.2.min(f.price_fp);
                     entry.3 = f.price_fp;
@@ -143,7 +140,11 @@ impl Pass1BaselineAggregator {
     }
 }
 
-fn measure_latencies_ns<F: FnMut(usize)>(total_events: usize, batch_sz: usize, mut f: F) -> (u64, u64, u64, u64) {
+fn measure_latencies_ns<F: FnMut(usize)>(
+    total_events: usize,
+    batch_sz: usize,
+    mut f: F,
+) -> (u64, u64, u64, u64) {
     let batches = total_events / batch_sz;
     let mut per_op_ns = Vec::with_capacity(batches);
     let wall_start = Instant::now();
@@ -187,8 +188,12 @@ fn main() {
     let mut compact_items = Vec::with_capacity(n_events);
     for ev in stream.iter().skip(1) {
         match ev {
-            IngestEvent::Execution(f) => compact_items.push(PreparedItem::Fill(CompactFill::from_proto(f))),
-            IngestEvent::L3Delta(d) => compact_items.push(PreparedItem::L3(CompactL3Delta::from_proto(d))),
+            IngestEvent::Execution(f) => {
+                compact_items.push(PreparedItem::Fill(CompactFill::from_proto(f)))
+            }
+            IngestEvent::L3Delta(d) => {
+                compact_items.push(PreparedItem::L3(CompactL3Delta::from_proto(d)))
+            }
             IngestEvent::L2Snapshot(_) => {}
         }
     }
@@ -260,20 +265,21 @@ fn main() {
     pass3_clean.ingest_event(&stream[0]);
 
     reset_alloc_counters();
-    let (p3_p50, p3_p99, p3_mean, p3_eps) = measure_latencies_ns(n_events, batch_sz, |idx| {
-        match compact_items[idx] {
+    let (p3_p50, p3_p99, p3_mean, p3_eps) =
+        measure_latencies_ns(n_events, batch_sz, |idx| match compact_items[idx] {
             PreparedItem::Fill(f) => {
                 pass3_clean.ingest_compact_fill("BTC-USDT", f);
             }
             PreparedItem::L3(d) => {
                 pass3_clean.ingest_compact_l3("BTC-USDT", d);
             }
-        }
-    });
+        });
     let (p3_allocs, p3_bytes) = read_alloc_counters();
 
     println!("================================================================================");
-    println!("HYPERION CH04 STREAM-AGGREGATOR — 3-PASS MICRO-OPTIMIZATION BENCHMARK (250,000 EVENTS)");
+    println!(
+        "HYPERION CH04 STREAM-AGGREGATOR — 3-PASS MICRO-OPTIMIZATION BENCHMARK (250,000 EVENTS)"
+    );
     println!("================================================================================");
     println!(
         "Pass 1 (Baseline HashMap/BTree/String) : p50={p1_p50} ns/op | p99={p1_p99} ns/op | mean={p1_mean} ns/op | throughput={p1_eps} ev/s | total_allocs={p1_allocs} ({b1} B/op)",

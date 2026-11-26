@@ -272,10 +272,12 @@ impl SymbolBook {
     pub fn find_level_idx(&self, side: u8, price_fp: u64) -> Result<usize, usize> {
         if side == 1 {
             // Bids sorted ascending
-            self.bids.binary_search_by(|lvl| lvl.price_fp.cmp(&price_fp))
+            self.bids
+                .binary_search_by(|lvl| lvl.price_fp.cmp(&price_fp))
         } else {
             // Asks sorted descending
-            self.asks.binary_search_by(|lvl| price_fp.cmp(&lvl.price_fp))
+            self.asks
+                .binary_search_by(|lvl| price_fp.cmp(&lvl.price_fp))
         }
     }
 }
@@ -815,7 +817,10 @@ impl ExchangeState {
         slot_idx
     }
 
-    pub fn remove_resting_order_by_id(&mut self, order_id: u64) -> Option<(HotOrderSlot, ColdOrderMeta)> {
+    pub fn remove_resting_order_by_id(
+        &mut self,
+        order_id: u64,
+    ) -> Option<(HotOrderSlot, ColdOrderMeta)> {
         let slot_idx = self.order_index.remove(order_id)?;
         let hot = self.hot_orders[slot_idx as usize];
         let cold = self.cold_orders[slot_idx as usize];
@@ -864,7 +869,10 @@ impl ExchangeState {
     /// Applies a single `MarketEventEnvelope` delta event during fast-forward replay.
     /// Zero Blake3 hashing is performed per intermediate event; dirty accounts and active LOB
     /// orders are committed once at the target sequence `T` (`compute_state_root`).
-    pub fn apply_wal_envelope(&mut self, env: & crate::pb::MarketEventEnvelope) -> Result<(), ChronosError> {
+    pub fn apply_wal_envelope(
+        &mut self,
+        env: &crate::pb::MarketEventEnvelope,
+    ) -> Result<(), ChronosError> {
         if env.engine_seq > 0 {
             self.engine_seq = env.engine_seq;
         }
@@ -906,7 +914,11 @@ impl ExchangeState {
         } else {
             d.symbol.as_str()
         };
-        let side_u8 = if d.side == OrderSide::Sell as i32 { 2 } else { 1 };
+        let side_u8 = if d.side == OrderSide::Sell as i32 {
+            2
+        } else {
+            1
+        };
         let op = L3DeltaOp::try_from(d.op).unwrap_or(L3DeltaOp::Unspecified);
 
         match op {
@@ -1114,7 +1126,8 @@ impl ExchangeState {
                 } else {
                     (num_t - half) / n_i128
                 };
-                if let (Ok(m), Ok(t)) = (i64::try_from(inferred_maker), i64::try_from(inferred_taker))
+                if let (Ok(m), Ok(t)) =
+                    (i64::try_from(inferred_maker), i64::try_from(inferred_taker))
                 {
                     self.maker_fee_ppm = m;
                     self.taker_fee_ppm = t;
@@ -1486,7 +1499,11 @@ impl ExchangeState {
     /// Builds Protobuf `L2BookSnapshot` for `symbol` up to `depth` levels (0 = full book).
     pub fn build_l2_snapshot(&mut self, symbol: &str, depth: usize) -> L2BookSnapshot {
         let state_root = self.compute_state_root();
-        let sym = if symbol.is_empty() { "BTC-USDT" } else { symbol };
+        let sym = if symbol.is_empty() {
+            "BTC-USDT"
+        } else {
+            symbol
+        };
         let b_idx = self.ensure_book(sym);
         let book = &self.books[b_idx];
         let max_levels = if depth == 0 { usize::MAX } else { depth };
@@ -1532,7 +1549,11 @@ impl ExchangeState {
 
     /// Reconstructs full L3 individual resting orders for `symbol` in strict price-time priority.
     pub fn build_l3_resting_orders(&self, symbol: &str) -> Vec<SnapshotRestingOrder> {
-        let sym = if symbol.is_empty() { "BTC-USDT" } else { symbol };
+        let sym = if symbol.is_empty() {
+            "BTC-USDT"
+        } else {
+            symbol
+        };
         let Some(book) = self.find_book(sym) else {
             return Vec::new();
         };
@@ -1586,7 +1607,11 @@ impl ExchangeState {
 
     /// Computes reconstructed liquidity & microstructure metrics at the current moment `T`.
     pub fn compute_liquidity_metrics(&self, symbol: &str) -> ReconstructedLiquidityMetrics {
-        let sym = if symbol.is_empty() { "BTC-USDT" } else { symbol };
+        let sym = if symbol.is_empty() {
+            "BTC-USDT"
+        } else {
+            symbol
+        };
         let Some(book) = self.find_book(sym) else {
             return ReconstructedLiquidityMetrics::default();
         };
@@ -1635,7 +1660,10 @@ impl ExchangeState {
     }
 
     /// Generates `MerkleLedgerProof` records for all active accounts (sorted by `account_id`).
-    pub fn build_all_account_merkle_proofs(&mut self, quote_asset_str: &str) -> Vec<MerkleLedgerProof> {
+    pub fn build_all_account_merkle_proofs(
+        &mut self,
+        quote_asset_str: &str,
+    ) -> Vec<MerkleLedgerProof> {
         self.flush_dirty_accounts_to_merkle();
         let lob_acc = self.build_lob_accumulator();
         let quote_sym = AssetSymbol::from_str_trunc(quote_asset_str);
@@ -1734,7 +1762,8 @@ impl ExchangeState {
         maker_fee_ppm: i64,
         taker_fee_ppm: i64,
     ) -> Result<i128, ChronosError> {
-        let reserve = checked_buyer_reserve_fp(limit_price_fp, qty_fp, maker_fee_ppm, taker_fee_ppm)?;
+        let reserve =
+            checked_buyer_reserve_fp(limit_price_fp, qty_fp, maker_fee_ppm, taker_fee_ppm)?;
         let Some(acc_idx) = self.account_index.get(account_id) else {
             return Ok(-1);
         };

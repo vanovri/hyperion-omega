@@ -5,7 +5,9 @@ use crate::config::{topics, AggregatorConfig};
 use crate::engine::{FlushBatch, IngestEvent, StreamAggregatorEngine};
 use crate::storage::redis_cache::HotStateCache;
 use crate::storage::{AnalyticsStorage, BoxFuture};
-use hyperion_proto::{ExecutionFill, L2BookSnapshot, L3BookDelta, MicrostructureMetrics, OhlcvCandle};
+use hyperion_proto::{
+    ExecutionFill, L2BookSnapshot, L3BookDelta, MicrostructureMetrics, OhlcvCandle,
+};
 use parking_lot::{Mutex, RwLock};
 use prost::Message;
 use std::collections::BTreeMap;
@@ -106,7 +108,11 @@ impl InMemoryBrokerCluster {
         Self::default()
     }
 
-    pub fn produce_ingest_event(&self, num_partitions: i32, ev: &IngestEvent) -> (String, i32, i64) {
+    pub fn produce_ingest_event(
+        &self,
+        num_partitions: i32,
+        ev: &IngestEvent,
+    ) -> (String, i32, i64) {
         let (topic, key_str, payload, schema_type) = match ev {
             IngestEvent::Execution(f) => (
                 topics::MARKET_EXECUTIONS.to_string(),
@@ -249,18 +255,17 @@ impl AggregatePublisher for InMemoryBrokerCluster {
 pub fn decode_market_record(topic: &str, payload: &[u8]) -> Result<IngestEvent, BrokerError> {
     match topic {
         topics::MARKET_EXECUTIONS => {
-            let f = ExecutionFill::decode(payload)
-                .map_err(|e| BrokerError::Decode(e.to_string()))?;
+            let f =
+                ExecutionFill::decode(payload).map_err(|e| BrokerError::Decode(e.to_string()))?;
             Ok(IngestEvent::Execution(f))
         }
         topics::MARKET_L3_DELTAS => {
-            let d =
-                L3BookDelta::decode(payload).map_err(|e| BrokerError::Decode(e.to_string()))?;
+            let d = L3BookDelta::decode(payload).map_err(|e| BrokerError::Decode(e.to_string()))?;
             Ok(IngestEvent::L3Delta(d))
         }
         topics::MARKET_L2_SNAPSHOTS => {
-            let s = L2BookSnapshot::decode(payload)
-                .map_err(|e| BrokerError::Decode(e.to_string()))?;
+            let s =
+                L2BookSnapshot::decode(payload).map_err(|e| BrokerError::Decode(e.to_string()))?;
             Ok(IngestEvent::L2Snapshot(s))
         }
         other => Err(BrokerError::Decode(format!("unsupported topic: {other}"))),
@@ -318,7 +323,10 @@ impl<S: AnalyticsStorage, P: AggregatePublisher> ExactlyOnceCoordinator<S, P> {
     }
 
     /// Restores committed partition offsets AND exact in-memory accumulator state from `AnalyticsStorage`.
-    pub async fn recover_from_storage(&mut self, consumer_group: &str) -> Result<bool, BrokerError> {
+    pub async fn recover_from_storage(
+        &mut self,
+        consumer_group: &str,
+    ) -> Result<bool, BrokerError> {
         let loaded = self
             .storage
             .load_checkpoint(consumer_group)
@@ -337,7 +345,10 @@ impl<S: AnalyticsStorage, P: AggregatePublisher> ExactlyOnceCoordinator<S, P> {
 
     /// Processes a batch of `PartitionRecord`s and triggers a transactional DB + Redis + Redpanda
     /// flush once `unflushed_events >= batch_flush_max_events`.
-    pub async fn process_records(&mut self, records: &[PartitionRecord]) -> Result<usize, BrokerError> {
+    pub async fn process_records(
+        &mut self,
+        records: &[PartitionRecord],
+    ) -> Result<usize, BrokerError> {
         let mut accepted = 0_usize;
         for rec in records {
             let ev = decode_market_record(&rec.topic, &rec.payload)?;

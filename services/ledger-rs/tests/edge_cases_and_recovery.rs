@@ -3,14 +3,9 @@ use hyperion_proto::{
     ApplyAccountRiskActionRequest, CancelOrder, CancelOrderRequest, CreditDepositRequest,
     GetL2BookSnapshotRequest, GetMerkleLedgerProofRequest, MarketRegime, ModifyOrder,
     ModifyOrderRequest, OrderSide, OrderStatus, OrderType, RejectReason, SelfTradePreventionMode,
-    StreamMarketEventsRequest, SubmitOrder, SubmitOrderRequest, TraceMetadata, U128,
-    VerifySystemLedgerInvariantRequest,
+    StreamMarketEventsRequest, SubmitOrder, SubmitOrderRequest, TraceMetadata,
+    VerifySystemLedgerInvariantRequest, U128,
 };
-use std::fs::OpenOptions;
-use std::io::{Seek, SeekFrom, Write};
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
-use std::time::Duration;
 use ledger_rs::engine::{DeterministicExchangeEngine, EngineSizing};
 use ledger_rs::fixed::FP_SCALE_U64;
 use ledger_rs::grpc::{
@@ -24,6 +19,11 @@ use ledger_rs::publisher::{
 };
 use ledger_rs::ring::spsc_channel;
 use ledger_rs::wal::{WalError, WalReader, WalSyncMode, WalWriter};
+use std::fs::OpenOptions;
+use std::io::{Seek, SeekFrom, Write};
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
@@ -473,7 +473,9 @@ fn test_modify_order_priority_and_merkle_tamper_detection() {
     assert!(!verify_merkle_proof(&tampered_leaf, &steps, &root));
 
     // Execution history Merkle proof for fill_id = 1
-    let exec_proof = eng.generate_execution_merkle_proof(1).expect("fill 1 proof");
+    let exec_proof = eng
+        .generate_execution_merkle_proof(1)
+        .expect("fill 1 proof");
     assert_eq!(exec_proof.state_root_blake3, root);
     assert!(verify_merkle_proof(
         &exec_proof.leaf_blake3_hash,
@@ -562,7 +564,9 @@ fn test_wal_tail_corruption_healing_mid_chain_tamper_and_snapshot_crash_recovery
         }
 
         // Write periodic `HYPSNP01` snapshot!
-        let snap_file = eng.write_snapshot_to_dir(&snap_dir).expect("write snapshot");
+        let snap_file = eng
+            .write_snapshot_to_dir(&snap_dir)
+            .expect("write snapshot");
         assert!(snap_file.exists());
 
         // Phase 2: post-snapshot tail WAL events (including a resting Buy order and RiskAction!)
@@ -613,8 +617,10 @@ fn test_wal_tail_corruption_healing_mid_chain_tamper_and_snapshot_crash_recovery
     {
         let mut f = OpenOptions::new().append(true).open(&wal_path).unwrap();
         // Write a fake partial WAL frame header + corrupted payload at EOF
-        f.write_all(&[0x50, 0x00, 0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x99, 0x88, 0x77])
-            .unwrap();
+        f.write_all(&[
+            0x50, 0x00, 0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x99, 0x88, 0x77,
+        ])
+        .unwrap();
         f.sync_all().unwrap();
     }
 
@@ -635,7 +641,10 @@ fn test_wal_tail_corruption_healing_mid_chain_tamper_and_snapshot_crash_recovery
         .expect("crash recovery succeeds");
 
     assert!(healed_tail, "must detect and heal corrupted tail bytes");
-    assert!(replayed_tail_frames > 0, "must replay post-snapshot tail frames");
+    assert!(
+        replayed_tail_frames > 0,
+        "must replay post-snapshot tail frames"
+    );
     assert_eq!(recovered.engine_seq(), expected_seq_at_crash);
     assert_eq!(recovered.state_root(), expected_root_at_crash);
 
@@ -675,14 +684,21 @@ fn test_wal_tail_corruption_healing_mid_chain_tamper_and_snapshot_crash_recovery
         let inv = recovered.query_system_invariant_proto(VerifySystemLedgerInvariantRequest {
             asset: asset.to_string(),
         });
-        assert!(inv.invariant_holds, "post-recovery invariant failed on {asset}");
+        assert!(
+            inv.invariant_holds,
+            "post-recovery invariant failed on {asset}"
+        );
         assert!(inv.crossed_book_free);
     }
 
     // Also verify mid-chain byte tampering (in the first frame) is strictly caught as CrcMismatch!
     drop(recovered);
     {
-        let mut f = OpenOptions::new().read(true).write(true).open(&wal_path).unwrap();
+        let mut f = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&wal_path)
+            .unwrap();
         f.seek(SeekFrom::Start(24)).unwrap(); // Inside first frame's engine_seq!
         f.write_all(&[0xFF, 0xFF]).unwrap();
         f.sync_all().unwrap();
@@ -793,7 +809,7 @@ async fn test_grpc_server_otel_spans_streaming_and_mock_redpanda_broker_e2e() {
         let _ = tonic::transport::Server::builder()
             .add_service(svc)
             .serve_with_incoming_shutdown(incoming, async move {
-                while !sd_grpc.load( std::sync::atomic::Ordering::Acquire) {
+                while !sd_grpc.load(std::sync::atomic::Ordering::Acquire) {
                     tokio::time::sleep(Duration::from_millis(25)).await;
                 }
             })

@@ -38,10 +38,7 @@ fn unit_fixed_point_exact_boundaries_and_signs() {
     assert_eq!(checked_notional_fp(1, 100_000_000).unwrap(), 1); // exact 1 atomic unit
 
     // Fee rate exact cap boundaries: -MAX_ABS_FEE_PPM and +MAX_ABS_FEE_PPM must succeed; +-1 beyond must fail!
-    assert_eq!(
-        checked_fee_fp(1_000_000, MAX_ABS_FEE_PPM).unwrap(),
-        500_000
-    );
+    assert_eq!(checked_fee_fp(1_000_000, MAX_ABS_FEE_PPM).unwrap(), 500_000);
     assert_eq!(
         checked_fee_fp(1_000_000, -MAX_ABS_FEE_PPM).unwrap(),
         -500_000
@@ -529,10 +526,7 @@ fn unit_merkle_wal_and_ring_primitives() {
     let seg = tmp.path().join("seg.wal");
     let (mut w, _, _) = WalWriter::open_segment(&seg, WalSyncMode::SyncEveryFrame).unwrap();
     let h1 = w.append_frame(1, 100, b"frame-1").unwrap();
-    assert_eq!(
-        h1,
-        compute_wal_frame_blake3(1, 100, &[0u8; 32], b"frame-1")
-    );
+    assert_eq!(h1, compute_wal_frame_blake3(1, 100, &[0u8; 32], b"frame-1"));
     assert_ne!(
         compute_wal_frame_crc32c(1, 100, &[0u8; 32], b"frame-1"),
         compute_wal_frame_crc32c(1, 101, &[0u8; 32], b"frame-1")

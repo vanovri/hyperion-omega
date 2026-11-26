@@ -7,9 +7,9 @@ use crate::watermark::{
     DeterministicWatermark, SequencedItem, WatermarkDecision, WatermarkReorderBuffer,
 };
 use hyperion_proto::{
-    ExecutionFill, GetVolumeProfileResponse, L2BookSnapshot, L3BookDelta, LiquidityHeatmapBucket,
-    MarketEventEnvelope, MicrostructureMetrics, OhlcvCandle, OrderSide, U128,
-    market_event_envelope::Payload,
+    market_event_envelope::Payload, ExecutionFill, GetVolumeProfileResponse, L2BookSnapshot,
+    L3BookDelta, LiquidityHeatmapBucket, MarketEventEnvelope, MicrostructureMetrics, OhlcvCandle,
+    OrderSide, U128,
 };
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
@@ -251,7 +251,11 @@ pub struct SymbolPipeline {
 }
 
 impl SymbolPipeline {
-    pub fn new(symbol: impl Into<String>, cfg: &AggregatorConfig, collect_raw_events_for_db: bool) -> Self {
+    pub fn new(
+        symbol: impl Into<String>,
+        cfg: &AggregatorConfig,
+        collect_raw_events_for_db: bool,
+    ) -> Self {
         let sym = symbol.into();
         Self {
             symbol: sym.clone(),
@@ -845,7 +849,8 @@ impl StreamAggregatorEngine {
             total_late_events: self.total_late_events,
         };
 
-        let payload = bincode::serialize(&snap).map_err(|e| EngineError::Serialize(e.to_string()))?;
+        let payload =
+            bincode::serialize(&snap).map_err(|e| EngineError::Serialize(e.to_string()))?;
         let crc = crc32c::crc32c(&payload);
         let blake = blake3::hash(&payload);
 
@@ -894,13 +899,20 @@ impl StreamAggregatorEngine {
         self.dynamic_symbols.clear();
         for sym_snap in snap.symbols {
             if let Some(idx) = Self::canonical_index_by_symbol(&sym_snap.symbol) {
-                self.canonical_slots[idx] =
-                    SymbolPipeline::from_snapshot(sym_snap, &self.cfg, self.collect_raw_events_for_db);
+                self.canonical_slots[idx] = SymbolPipeline::from_snapshot(
+                    sym_snap,
+                    &self.cfg,
+                    self.collect_raw_events_for_db,
+                );
             } else {
                 let name = sym_snap.symbol.clone();
                 self.dynamic_symbols.insert(
                     name,
-                    SymbolPipeline::from_snapshot(sym_snap, &self.cfg, self.collect_raw_events_for_db),
+                    SymbolPipeline::from_snapshot(
+                        sym_snap,
+                        &self.cfg,
+                        self.collect_raw_events_for_db,
+                    ),
                 );
             }
         }
@@ -1013,7 +1025,9 @@ mod tests {
     fn checkpoint_integrity_checks_both_crc32c_and_blake3() {
         let cfg = AggregatorConfig::default();
         let eng = StreamAggregatorEngine::new(cfg.clone());
-        let valid = eng.serialize_checkpoint().expect("serialize valid checkpoint");
+        let valid = eng
+            .serialize_checkpoint()
+            .expect("serialize valid checkpoint");
 
         // 1. Valid checkpoint restores cleanly
         let mut dst = StreamAggregatorEngine::new(cfg.clone());

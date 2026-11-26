@@ -43,7 +43,9 @@ pub enum ChronosError {
     #[error("WAL Blake3 frame digest mismatch at seq {engine_seq} (offset {offset})")]
     WalBlake3Mismatch { engine_seq: u64, offset: u64 },
 
-    #[error("WAL hash chain broken at seq {engine_seq}: prev_blake3 does not match prior frame_blake3")]
+    #[error(
+        "WAL hash chain broken at seq {engine_seq}: prev_blake3 does not match prior frame_blake3"
+    )]
     WalChainBroken { engine_seq: u64 },
 
     #[error("Non-monotonic or gapped WAL engine_seq: expected {expected}, found {found}")]

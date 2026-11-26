@@ -52,7 +52,6 @@ var (
 	twoPow128 = new(big.Int).Lsh(big.NewInt(1), 128)
 	minI128   = new(big.Int).Neg(twoPow127)
 	mask64    = new(big.Int).Sub(twoPow64, big.NewInt(1))
-	fpScaleBI = new(big.Int).SetUint64(FPScale)
 )
 
 // ToProtoU128 converts an exact non-negative *big.Int (< 2^128) to hyperionv1.U128.

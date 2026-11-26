@@ -7,7 +7,7 @@ use crate::engine::FlushBatch;
 use crate::fixed_point::quantize_price_bucket;
 use hyperion_proto::{
     ExecutionFill, GetVolumeProfileResponse, LiquidityHeatmapBucket, MicrostructureMetrics,
-    OhlcvCandle, OrderSide, U128, VolumeProfileBin,
+    OhlcvCandle, OrderSide, VolumeProfileBin, U128,
 };
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
@@ -204,11 +204,7 @@ impl AnalyticsStorage for InMemoryTransactionalStore {
             }
 
             for cp in &batch.checkpoints {
-                let key = (
-                    cp.consumer_group.clone(),
-                    cp.topic.clone(),
-                    cp.partition_id,
-                );
+                let key = (cp.consumer_group.clone(), cp.topic.clone(), cp.partition_id);
                 db.checkpoints.insert(key, cp.clone());
                 receipt.checkpoints_committed += 1;
             }

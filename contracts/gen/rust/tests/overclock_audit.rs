@@ -115,7 +115,10 @@ fn overclock_soak_500k_zero_leak_and_zero_alloc() {
         "[RUST 500K SOAK] cycles={SOAK_CYCLES} allocs={allocs} alloc_bytes={alloc_bytes} dealloc_bytes={dealloc_bytes} net_leak_bytes={net_leak}"
     );
     assert_eq!(allocs, 0, "expected 0 heap allocations on hot-path soak");
-    assert_eq!(net_leak, 0, "expected 0 bytes memory leak across 500,000 cycles");
+    assert_eq!(
+        net_leak, 0,
+        "expected 0 bytes memory leak across 500,000 cycles"
+    );
 }
 
 #[test]

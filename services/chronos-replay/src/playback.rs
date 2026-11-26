@@ -160,7 +160,9 @@ impl PlaybackSessionManager {
             .read()
             .ok()
             .and_then(|m| m.get(&req.session_id).cloned())
-            .ok_or_else(|| ChronosError::NotFound(format!("VCR session '{}' not found", req.session_id)))?;
+            .ok_or_else(|| {
+                ChronosError::NotFound(format!("VCR session '{}' not found", req.session_id))
+            })?;
 
         let (timeline_base, events, _, _) =
             self.load_timeline_window(&session.timeline_id, session.from_seq, session.to_seq)?;
@@ -278,7 +280,10 @@ impl PlaybackSessionManager {
             Ok((base_state, slice, from_seq, to_seq))
         } else {
             let fork = self.engine.get_fork(timeline_id).ok_or_else(|| {
-                ChronosError::NotFound(format!("counterfactual timeline '{}' not found", timeline_id))
+                ChronosError::NotFound(format!(
+                    "counterfactual timeline '{}' not found",
+                    timeline_id
+                ))
             })?;
             Ok((
                 fork.base_state_at_start.clone(),
@@ -365,7 +370,9 @@ impl PlaybackSessionManager {
             );
 
             {
-                let Ok(mut g) = session.inner.lock() else { break };
+                let Ok(mut g) = session.inner.lock() else {
+                    break;
+                };
                 // Only advance if an asynchronous Rewind/Pause didn't override cursor mid-flight
                 if !g.is_paused && g.cursor_idx == cursor {
                     g.cursor_idx = cursor + 1;
